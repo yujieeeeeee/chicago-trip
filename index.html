@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1B2631">
+<title>芝加哥 × UIUC 七日交通導航</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Condensed:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#EDF0F3; --card:#FFFFFF; --ink:#16212B; --muted:#56636F; --rule:#D3DAE1;
+  --plate:#1B2631; --plate-ink:#FFFFFF; --plate-sub:#B9C6D2;
+  --bad:#B00A2A; --bad-bg:#FBE7EB; --warn:#8A5A00; --warn-bg:#FFF3D3; --ok:#0B6E38; --ok-bg:#E2F3E9;
+  --accent:#0077B6; --chip:#E3E8ED;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1419; --card:#16202A; --ink:#E5ECF2; --muted:#9AA8B5; --rule:#2A3742;
+    --plate:#03070A; --plate-ink:#FFFFFF; --plate-sub:#A9B8C5;
+    --bad:#FF6B86; --bad-bg:#3A121B; --warn:#F2B53A; --warn-bg:#33280C; --ok:#55CE8B; --ok-bg:#0E2C1C;
+    --accent:#4FC3F7; --chip:#22303C; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1419; --card:#16202A; --ink:#E5ECF2; --muted:#9AA8B5; --rule:#2A3742;
+  --plate:#03070A; --plate-ink:#FFFFFF; --plate-sub:#A9B8C5;
+  --bad:#FF6B86; --bad-bg:#3A121B; --warn:#F2B53A; --warn-bg:#33280C; --ok:#55CE8B; --ok-bg:#0E2C1C;
+  --accent:#4FC3F7; --chip:#22303C; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:calc(env(safe-area-inset-top,0px) + 120px);-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:"Atkinson Hyperlegible",-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;font-size:16px;line-height:1.55;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--plate)}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.app{max-width:640px;margin:0 auto;padding-bottom:calc(64px + env(safe-area-inset-bottom,0px))}
+.app.has-act{padding-bottom:calc(150px + env(safe-area-inset-bottom,0px))}
+main{padding:0 14px}
+
+/* 頂部 */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--plate);color:var(--plate-ink)}
+.clock b{display:block;font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:22px;font-weight:600;letter-spacing:.01em;line-height:1.1}
+.clock span{font-size:12px;color:var(--plate-sub)}
+.lostbtn{background:#C60C30;color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:700;min-height:44px;white-space:nowrap}
+.days{display:flex;gap:6px;overflow-x:auto;padding:10px 14px;background:var(--paper);scrollbar-width:none}
+.days::-webkit-scrollbar{display:none}
+.dt{flex:0 0 auto;border:1px solid var(--rule);background:var(--card);border-radius:10px;padding:6px 10px;min-height:48px;display:flex;flex-direction:column;align-items:center;line-height:1.2}
+.dt b{font-size:14px}.dt span{font-size:12px;color:var(--muted)}
+.dt.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}.dt.on span{color:inherit;opacity:.8}
+
+/* 日標題 */
+.dayhead h1{font-family:"Barlow Condensed","Arial Narrow","PingFang TC",sans-serif;font-size:30px;font-weight:600;margin:6px 0 0;line-height:1.15}
+.dayhead p{margin:2px 0 8px;color:var(--muted)}
+.dprog,.prog{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)}
+.bar{flex:1;height:6px;border-radius:3px;background:var(--chip);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok);transition:width .25s}
+.sw{margin:12px 0 4px}
+.sw>span{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}
+.seg{display:flex;gap:4px;background:var(--chip);border-radius:12px;padding:4px;overflow-x:auto}
+.seg-b{flex:1 0 auto;border:0;background:transparent;border-radius:9px;padding:9px 10px;min-height:42px;font-size:14px;white-space:nowrap}
+.seg-b.on{background:var(--card);font-weight:700;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg-b:disabled{opacity:.5;cursor:not-allowed}
+
+.note{border-radius:10px;padding:10px 12px;margin:10px 0;font-size:14px;background:var(--chip)}
+.note.ok{background:var(--ok-bg);color:var(--ok)}
+.note.warn{background:var(--warn-bg);color:var(--warn)}
+.note.bad{background:var(--bad-bg);color:var(--bad);font-weight:600}
+.note .mini{margin-left:8px;margin-top:6px}
+.fine{font-size:12.5px;color:var(--muted);margin:6px 0}
+.now{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;border-left:4px solid var(--ok);padding:8px 12px;margin:10px 0;background:var(--card);border-radius:0 10px 10px 0}
+.now small{color:var(--ok);font-weight:700}.now span{color:var(--muted);font-size:13px}
+
+/* 主視覺：站牌 */
+.hero{margin:14px 0 10px}
+.hero-title small{display:block;color:var(--muted);font-size:13px}
+.hero-title b{display:block;font-size:18px;line-height:1.35}
+.hero-title span{display:block;color:var(--muted);font-size:13px;margin-bottom:8px}
+.plate{background:var(--plate);color:var(--plate-ink);border-radius:12px;padding:14px 16px 16px}
+.plate-top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.plate-line{display:inline-block;color:#fff;font-weight:700;font-size:13px;border-radius:4px;padding:2px 8px}
+.plate-count{font-size:12px;color:var(--plate-sub);margin-left:auto}
+.plate-en{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:34px;font-weight:600;line-height:1.05;letter-spacing:.005em;overflow-wrap:anywhere}
+.plate-zh{font-size:15px;color:var(--plate-sub);margin-top:2px}
+.plate-t{font-size:16px;margin:10px 0 0;line-height:1.55}
+
+/* 路段選擇 */
+.legpick{display:flex;flex-direction:column;gap:6px;margin:12px 0}
+.lp{display:grid;grid-template-columns:30px 1fr;gap:2px 10px;text-align:left;border:1px solid var(--rule);background:var(--card);border-radius:10px;padding:10px;min-height:52px}
+.lp-n{grid-row:1/3;width:28px;height:28px;border-radius:50%;background:var(--chip);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px}
+.lp-t{font-weight:600;font-size:15px}
+.lp-m{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.lp.on{border:2px solid var(--ink);padding:9px}
+.lp.fin .lp-n{background:var(--ok);color:#fff}
+.lp em{font-style:normal;font-weight:800;border-radius:50%;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:12px}
+.lp em.bad{background:var(--bad)}.lp em.warn{background:var(--warn)}
+.strip{display:inline-flex;gap:3px;flex-wrap:wrap}
+.bul{display:inline-block;color:#fff;font-size:11.5px;font-weight:700;border-radius:4px;padding:1px 6px;line-height:1.5;white-space:nowrap}
+
+/* 路段詳情 */
+.leg{background:var(--card);border-radius:14px;padding:14px;margin:6px 0 16px;border:1px solid var(--rule)}
+.ft{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-weight:700;font-size:16px;margin-bottom:10px}
+.ft .arr{color:var(--muted)}
+.eta{margin:12px 0;padding:12px;border-radius:10px;background:var(--paper)}
+.eta .f{display:inline-flex;align-items:center;gap:8px;margin-right:6px}
+.eta-out{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px}
+.eta-out small{display:block;color:var(--muted);font-size:12px}
+.eta-out b{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:24px;font-weight:600}
+.steps{list-style:none;padding:0;margin:10px 0}
+.steps li{display:grid;grid-template-columns:40px 1fr;gap:10px;padding:10px 0;border-top:1px solid var(--rule)}
+.steps li p{margin:2px 0 0;font-size:15px}
+.steps li.done p,.steps li.done .sl{opacity:.55}
+.steps li.cur{background:var(--warn-bg);margin:0 -8px;padding:10px 8px;border-radius:8px;border-top-color:transparent}
+.chk{width:36px;height:36px;border-radius:50%;border:2px solid var(--rule);background:var(--card);font-weight:700}
+.steps li.done .chk{background:var(--ok);border-color:var(--ok);color:#fff}
+.steps li.done.skip .chk{background:var(--muted);border-color:var(--muted)}
+.steps li.cur .chk{border-color:var(--ink)}
+.sl{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.sl b{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:19px;font-weight:600}
+.sl span{color:var(--muted);font-size:13px}
+.maprow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}
+.btn{display:flex;align-items:center;justify-content:center;text-align:center;min-height:46px;padding:8px;border-radius:10px;border:1px solid var(--rule);background:var(--paper);color:var(--ink);text-decoration:none;font-weight:600;font-size:14px}
+.addr{grid-column:1/-1;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.addr em{font-style:normal;color:var(--ok);margin-left:8px;font-weight:700}
+.mini{border:1px solid var(--rule);background:var(--card);border-radius:8px;padding:6px 10px;min-height:38px;font-size:13.5px}
+.mini.ghost{background:transparent}
+.row-btn{display:flex;gap:8px;flex-wrap:wrap;margin:6px 0}
+.cost{border-top:1px solid var(--rule);padding-top:10px;margin-top:6px}
+.cost-g{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cost-g small{display:block;color:var(--muted);font-size:12px}
+.cost-g b{font-size:17px}
+.quote{margin-top:8px}
+.f{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.f input,.f select{min-height:44px;border:1px solid var(--rule);border-radius:8px;padding:8px 10px;background:var(--card);color:var(--ink);font-size:16px;width:100%;max-width:100%}
+.eta .f input{width:auto}
+.more{border-top:1px solid var(--rule);padding:8px 0}
+.more summary{font-weight:700;min-height:40px;display:flex;align-items:center;cursor:pointer}
+.more ul{margin:4px 0;padding-left:20px}.more li{margin:4px 0;font-size:14.5px}
+.more p{margin:4px 0;font-size:14.5px}
+
+/* 時間軸 */
+.sec{font-size:17px;margin:22px 0 8px}
+.tl{list-style:none;margin:0;padding:0 0 0 2px;border-left:2px solid var(--rule)}
+.tl li{display:grid;grid-template-columns:66px 1fr;gap:8px;padding:8px 0 8px 10px;position:relative}
+.tl time{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:18px;font-weight:600;line-height:1.2}
+.tl time small{display:block;font-size:14px;color:var(--muted)}
+.tl-e::before{content:"";position:absolute;left:-7px;top:14px;width:12px;height:12px;border-radius:50%;background:var(--ink)}
+.tl-e.dim{opacity:.55}
+.tl-h{display:flex;gap:6px;align-items:flex-start;justify-content:space-between}
+.tl-e p{margin:4px 0 0;font-size:14px}
+.tl-l button{display:flex;flex-wrap:wrap;gap:6px;align-items:center;border:1px dashed var(--rule);background:transparent;border-radius:8px;padding:6px 8px;text-align:left;font-size:13px;color:var(--muted);min-height:40px}
+.badge{flex:0 0 auto;font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.st-ok{background:var(--ok-bg);color:var(--ok)}
+.st-pend{background:var(--warn-bg);color:var(--warn)}
+.st-wait{background:repeating-linear-gradient(45deg,var(--chip),var(--chip) 4px,transparent 4px,transparent 8px);color:var(--muted);border:1px solid var(--rule)}
+.st-alt{border:1px solid var(--muted);color:var(--muted)}
+.st-todo{background:var(--bad-bg);color:var(--bad)}
+.st-info{background:var(--chip);color:var(--muted)}
+.st-self{background:var(--chip);color:var(--ink)}
+
+/* 其他頁 */
+.pg{font-family:"Barlow Condensed","Arial Narrow","PingFang TC",sans-serif;font-size:30px;font-weight:600;margin:14px 0 4px}
+.lead{color:var(--muted);margin:0 0 12px;font-size:14px}
+.card{background:var(--card);border:1px solid var(--rule);border-radius:12px;margin:8px 0;padding:0 12px}
+.card summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:52px;cursor:pointer}
+.card .right{margin-left:auto;font-size:13px;color:var(--muted)}
+.card dl{margin:0 0 10px}.card dl div{padding:8px 0;border-top:1px solid var(--rule)}
+.card dt{font-weight:700;font-size:13px;color:var(--muted)}.card dd{margin:2px 0 0;font-size:14.5px}
+.sum{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.sum>div{background:var(--plate);color:var(--plate-ink);border-radius:12px;padding:12px}
+.sum small{display:block;color:var(--plate-sub);font-size:12px}
+.sum b{display:block;font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:30px;font-weight:600;line-height:1.1}
+.sum span{font-size:13px;color:var(--plate-sub)}
+.setg{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}
+.setg .wide,.setg .tg,.setg .fine,.setg .note{grid-column:1/-1}
+.tg{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;min-height:44px}
+.tg input{width:22px;height:22px;flex:0 0 auto;margin-top:2px}
+.tbl{width:100%;border-collapse:collapse;font-size:13.5px;margin:4px 0}
+.tbl td{border-top:1px solid var(--rule);padding:6px 4px;vertical-align:top}
+.tbl td small{display:block;color:var(--muted)}
+.tbl td:nth-child(n+2){text-align:right;white-space:nowrap}
+.cl{list-style:none;padding:0;margin:8px 0}
+.cl li{border-top:1px solid var(--rule)}
+.cl label{display:flex;gap:12px;align-items:center;min-height:50px;font-size:15.5px}
+.cl input{width:24px;height:24px;flex:0 0 auto}
+.cl .x{text-decoration:line-through;color:var(--muted)}
+.foot{font-size:12px;color:var(--muted);margin:28px 0 10px}
+
+/* 底部操作 */
+.act{position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom,0px));z-index:25;background:var(--card);border-top:1px solid var(--rule);padding:8px 12px 10px}
+.act-bar{height:4px;background:var(--chip);border-radius:2px;overflow:hidden;margin-bottom:8px;max-width:616px;margin-left:auto;margin-right:auto}
+.act-bar i{display:block;height:100%;background:var(--ok)}
+.act-row{display:grid;grid-template-columns:1fr 1fr 2fr;gap:8px;max-width:616px;margin:0 auto}
+.ab{min-height:50px;border-radius:12px;border:1px solid var(--rule);background:var(--paper);font-weight:700;font-size:15px}
+.ab.main{background:var(--ok);border-color:var(--ok);color:#fff}
+.ab:disabled{opacity:.45}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:26;display:grid;grid-template-columns:repeat(5,1fr);background:var(--plate);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabs button{background:transparent;border:0;color:var(--plate-sub);min-height:56px;font-size:14px;font-weight:600}
+.tabs button.on{color:#fff;box-shadow:inset 0 3px 0 #00A1DE}
+
+/* 迷路 */
+.modal{position:fixed;inset:0;z-index:40;background:rgba(0,0,0,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--card);width:100%;max-width:640px;max-height:92vh;overflow-y:auto;border-radius:16px 16px 0 0;padding:14px 14px calc(24px + env(safe-area-inset-bottom,0px))}
+.sheet-h{display:flex;justify-content:space-between;align-items:center;font-size:20px}
+.sheet h3{font-size:15px;margin:16px 0 6px}
+.lostft{background:var(--paper);border-radius:10px;padding:10px;margin-top:10px}
+.lostft small{display:block;color:var(--muted)}
+.signs{display:flex;flex-wrap:wrap;gap:6px}
+.signs span{background:var(--plate);color:#fff;font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-size:17px;border-radius:6px;padding:4px 10px}
+.phr{list-style:none;padding:0;margin:0}
+.phr li{border-top:1px solid var(--rule);padding:8px 0}
+.phr small{display:block;color:var(--muted)}
+.phr b{font-size:17px;line-height:1.4}
+.tel{list-style:none;padding:0;margin:0}
+.tel li{display:flex;gap:10px;align-items:center;border-top:1px solid var(--rule);min-height:46px;flex-wrap:wrap}
+.tel a{font-weight:700;color:var(--accent);min-width:150px}
+.tel span{font-size:14px;color:var(--muted)}
+
+@media (max-width:360px){ .plate-en{font-size:28px} .act-row{grid-template-columns:1fr 1fr 1.6fr} .cost-g b{font-size:15px} }
+@media (prefers-reduced-motion:reduce){ *{transition:none!important;scroll-behavior:auto!important} }
+
+</style>
+</head>
+<body>
+<div id="root"><p style="padding:20px">載入中…</p></div>
+<script src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<script>
+/* ===== 資料：地點、活動、路段 ===== */
+var LINES = {
+  ATS:{c:'#6B7785',n:'ATS'}, Blue:{c:'#00A1DE',n:'Blue'}, Red:{c:'#C60C30',n:'Red'}, Green:{c:'#009B3A',n:'Green'},
+  Pink:{c:'#E27EA6',n:'Pink'}, Purple:{c:'#522398',n:'Purple'}, Brown:{c:'#62361B',n:'Brown'},
+  Walk:{c:'#7E8B97',n:'步行'}, Uber:{c:'#111820',n:'Uber'}, Amtrak:{c:'#1F4E8C',n:'Amtrak'},
+  MTD:{c:'#C99A00',n:'MTD'}, Shuttle:{c:'#7A5AA6',n:'接駁'}, Bus:{c:'#B4532A',n:'巴士'}, Metra:{c:'#005DAA',n:'Metra'}
+};
+
+var P = {
+  T5:{n:'O’Hare 第 5 航廈',a:"O'Hare International Airport Terminal 5, Chicago, IL 60666",en:"O'Hare Terminal 5"},
+  HI:{n:'HI Chicago Hostel',a:'24 E Ida B Wells Dr, Chicago, IL 60605',en:'HI Chicago Hostel'},
+  GCP:{n:'Google Cloud × Striim',a:'210 N Carpenter St, Chicago, IL 60607',en:'210 N Carpenter St'},
+  DBX:{n:'Databricks（Loft on Lake）',a:'1366 W Lake St, Chicago, IL 60607',en:'Loft on Lake'},
+  NU:{n:'Northwestern Levy Atrium',a:'2001 Sheridan Rd, Evanston, IL 60208',en:'2001 Sheridan Road, Evanston'},
+  QCCS:{n:'Technological Institute（QCCS）',a:'2145 Sheridan Rd, Evanston, IL 60208',en:'Technological Institute'},
+  UIC:{n:'UIC CDRLC Room 1413',a:'850 W Taylor St, Chicago, IL 60607',en:'CDRLC, 850 W Taylor St'},
+  AMZ:{n:'Amazon ORD10（The Franklin 14F）',a:'227 W Monroe St, Chicago, IL 60606',en:'227 W Monroe St'},
+  AUD:{n:'AI Under Debate',a:'1 W Monroe St, Chicago, IL 60603',en:'1 W Monroe St'},
+  WBX:{n:'Workbox River North',a:'306 W Erie St, Chicago, IL 60654',en:'306 W Erie St'},
+  CUS:{n:'Chicago Union Station',a:'225 S Canal St, Chicago, IL 60606',en:'Chicago Union Station'},
+  ITC:{n:'Illinois Terminal（Champaign-Urbana 站）',a:'45 E University Ave, Champaign, IL 61820',en:'Illinois Terminal'},
+  GRL:{n:'Grainger Engineering Library',a:'1301 W Springfield Ave, Urbana, IL 61801',en:'Grainger Engineering Library'},
+  CSL:{n:'Coordinated Science Laboratory',a:'1308 W Main St, Urbana, IL 61801',en:'Coordinated Science Lab'},
+  JD:{n:'John Deere Technology Innovation Center',a:'2021 S 1st St Ste 101, Champaign, IL 61820',en:'John Deere Technology Innovation Center'},
+  CHL:{n:'Champaign 住宿',dyn:'chl',en:'my hotel in Champaign'},
+  ORH:{n:'O’Hare 機場附近旅館',dyn:'orh',en:'my airport hotel'}
+};
+
+var DAYS = [
+  {id:1,date:'2026-11-10',md:'11/10',dow:'二',title:'抵達芝加哥＋兩場科技活動'},
+  {id:2,date:'2026-11-11',md:'11/11',dow:'三',title:'Northwestern → IEEE × ACM'},
+  {id:3,date:'2026-11-12',md:'11/12',dow:'四',title:'AWS Workshop → AI Meetup'},
+  {id:4,date:'2026-11-13',md:'11/13',dow:'五',title:'Amtrak 南下 → UIUC → 黑客松'},
+  {id:5,date:'2026-11-14',md:'11/14',dow:'六',title:'UIUC 黑客松全天'},
+  {id:6,date:'2026-11-15',md:'11/15',dow:'日',title:'決賽 → Amtrak 回芝加哥 → 機場旅館'},
+  {id:7,date:'2026-11-16',md:'11/16',dow:'一',title:'CX807 返台'}
+];
+
+/* 活動：st = ok 已確認｜pend 待確認｜wait 候補中｜alt 備案｜todo 待填寫／未確認｜info 備選資料｜self 自行安排 */
+function eventsFor(day, S){
+  var amt391 = S.amt391 ? 'ok' : 'todo', amt392 = S.amt392 ? 'ok' : 'todo';
+  var E = {
+    1:[
+      {t:'12:30',title:'CX806 抵達 O’Hare 第 5 航廈',st:'ok',note:'入境審查、領行李、海關，預留 60–90 分鐘。出關後到「設定」輸入實際出關時間。'},
+      {t:'14:00',e:'18:10',title:'Google Cloud × Striim：Cloud Encounters: Data & AI Workshop',p:'GCP',st:'ok',note:'官方約 14:00 開始，計畫 15:45 抵達，趕上 Demo、16:30 Workshop 與交流。地址與樓層以確認信為準，帶護照備查。'},
+      {t:'18:15',e:'21:00',title:'Databricks DevConnect Chicago',p:'DBX',st:'ok',note:'報到出示確認信中的條碼。18:15–19:45 講座，20:00 起交流。'},
+      {t:'21:30',title:'HI Chicago Hostel 入住',p:'HI',st:'pend',note:'請核對訂房信的入住時間與寄放行李規定（到櫃台問 “Can we store our luggage before check-in?”）。'}
+    ],
+    2:[
+      {t:'11:30',e:'16:45',title:'Northwestern：The AI-Energy-Compute Nexus（Trienens Institute）',p:'NU',st:'pend',alt:S.d2==='qccs',note:'Joseph and Carole Levy Atrium，2001 Sheridan Rd（Sheridan Rd 與 Foster St 轉角）。報名表已送出但沒有確認信，外校生能否入場仍待主辦回覆。15:45 NVIDIA Steven B. Torrisi 講座。官網時間為 11:30–17:00。'},
+      {t:'12:00',e:'16:00',title:'備案：QCCS 2026 量子電腦資安研討會',p:'QCCS',st:'alt',alt:S.d2!=='qccs',note:'Technological Institute，2145 Sheridan Rd。只有主要年會無法入場時才切換。'},
+      {t:'12:30',e:'13:30',title:'備選資料：UChicago 隱私講座（Helen Nissenbaum）',st:'info',note:'UChicago DSI，John Crerar Library。和 Northwestern 撞時間，不列入動線。'},
+      {t:'17:30',e:'19:30',title:'IEEE CS × ACM Chicago：Embodied Computational Intelligence',p:'UIC',st:'ok',note:'17:30 Networking、18:00–19:00 講座、19:00 後交流。vTools 預約已確認，信中有 Zoom 連結（混合制）。'}
+    ],
+    3:[
+      {t:'09:00',e:'11:45',title:'旅館整理黑客松設備',p:'HI',st:'self',note:'Jetson Orin Nano、YOLO → TensorRT 部署流程、電源與線材。11:45 附近吃午餐，12:20 出發。'},
+      {t:'13:00',e:'16:00',title:'Chicago AWS Quick User Group',p:'AMZ',st:'ok',note:'227 W Monroe St，14 樓 Suite 1400，Rooms 14.102–14.103。建議 12:40–12:45 抵達。一樓 Guest Services 出示 QR Code＋護照開通，再過閘門上樓。'},
+      {t:'17:30',e:'20:30',title:'AI UNDER DEBATE: CHICAGO',p:'AUD',st:S.audOk?'ok':'wait',alt:S.d3!=='aud',note:S.audOk?'你已在設定中標示收到正式入場通知。和 Agentics 同時段，只能二選一。':'目前為候補，不能當成已報名。收到正式入場通知後到「設定」打開，才可切換。（舊版資料曾寫 11/8 已錄取，請以 Luma「My Tickets」為準。）'},
+      {t:'18:00',e:'20:00',title:'Agentics Foundation Chicago Meetup',p:'WBX',st:'ok',alt:S.d3==='aud',note:'Workbox River North，306 W Erie St Ste 300。AI Agent 與開源技術交流。'}
+    ],
+    4:[
+      {t:'08:15',e:'10:47',title:'Amtrak 391：Chicago Union Station → Champaign-Urbana',p:'CUS',st:amt391,note:S.amt391?'已標示購票。三人 eTicket 存進手機相簿。':'尚未確認已購票：請在 Amtrak App 購買 11/13 Train 391 三人票，買好後到「設定」打勾。'},
+      {t:'11:00',e:'16:00',title:'UIUC 校園參訪',p:'GRL',st:'self',note:'Grainger Engineering Library → Siebel Center for Computer Science → NCSA → CSL。大樓公共區域以外通常需刷卡。'},
+      {t:'17:00',e:'24:00',title:'UIUC Precision & Digital Agriculture Hackathon',p:'JD',st:'ok',note:'17:00 報到與歡迎晚餐 → 18:00 Opening Keynote → 18:30 公布賽道 → 19:00 業界 Mentor 介紹 → 19:30 組隊選題 → 21:00 開始開發 → 24:00 場館關閉。官網寫 CDT，實際 11/1 起是 CST，以現場公告為準。'},
+      {t:'24:00',title:'Champaign 住宿',p:'CHL',st:S.chl?'pend':'todo',note:S.chl?'地址已填寫，請核對訂房信。':'住宿地址待填寫（到「設定」輸入，導航會自動更新）。'}
+    ],
+    5:[
+      {t:'08:00',e:'22:00',title:'Hackathon 全天開發',p:'JD',st:'ok',note:'程式開發、AI／機器人整合、測試、Demo 準備。12:00 午餐、18:00 晚餐（依主辦）。19:00 左右業界 Mentor 交流。'},
+      {t:'12:00',title:'會場附近餐飲與日用品',st:'info',note:'Google 地圖資料，營業時間以現場為準：Harvest Market 超市與熟食（2029 S Neil St，每日 06:00–22:00，步行約 10 分鐘）；Haymakers 便利商店（202 Devonshire Dr，每日 05:30–21:00）；Aspen Tap House 餐廳（2001 S Neil St，週六到 23:00）；Kirby Food & Liquor 小超市（303 Cedar St，週六到 24:00）。'}
+    ],
+    6:[
+      {t:'09:00',e:'17:00',title:'Hackathon 決賽',p:'JD',st:'ok',note:'13:00 決賽簡報與 Demo → 15:30 評審 → 16:00 頒獎 → 17:00 結束。當面請主辦提供參賽證明。'},
+      {t:'19:08',e:'21:45',title:'Amtrak 392：Champaign-Urbana → Chicago Union Station',p:'ITC',st:amt392,note:'Amtrak 時刻表：Champaign 19:08 開、Chicago 21:45 到（舊資料寫約 21:50）。11/15 出發前在 Amtrak App 再核對一次。'+(S.amt392?'':' 尚未確認已購票。')},
+      {t:'23:00',title:'O’Hare 機場附近旅館',p:'ORH',st:S.orh?'pend':'todo',note:S.orh?'地址已填寫，請核對訂房信與是否有機場接駁車。':'旅館地址待填寫（到「設定」輸入）。11/15 晚上 SC26 在芝加哥，房價高，請儘早訂。'}
+    ],
+    7:[
+      {t:'09:30',title:'退房',p:'ORH',st:'self',note:'行動電源、鋰電池放隨身行李，不可托運。'},
+      {t:'11:00',title:'Terminal 5 國泰航空報到',p:'T5',st:'self',note:'國際線建議起飛前 3 小時到。托運行李、安檢、登機。'},
+      {t:'14:10',title:'CX807 從 O’Hare 起飛',p:'T5',st:'ok',note:'芝加哥 11/16 14:10＝台灣 11/17（二）04:10。CX807 飛往香港，近期同航班表定隔天 20:05 抵港，即約 11/17（二）20:05。轉機抵台時間請依機票填入「設定」。'}
+    ]
+  };
+  return E[day] || [];
+}
+
+/* 共用：叫車步驟 */
+function uberSteps(pick, drop, extra){
+  var s = [
+    {t:'走到上車點：'+pick+'。到了再叫車，避免司機等太久被取消。',line:'Uber',en:'Rideshare Pickup',zh:'共乘上車區'},
+    {t:'打開 Uber（按下方「開啟 Uber」會自動帶入英文目的地）。三人＋2 件以上大行李選 UberXL；只有背包選 UberX。確認報價後按 Request。'},
+    {t:'核對三件事都一致才上車：車牌號碼、車型顏色、司機名字。開口問 “Hi, are you here for Sean?”',en:'Check plate · car · driver',zh:'核對車牌、車型、司機'},
+    {t:'上車後在 App 按「Share trip status」分享行程給同行者；三人盡量一起坐後座＋副駕。'},
+    {t:drop||'下車前確認手機、護照、筆電都在身上，然後走到目的地入口。'}
+  ];
+  if (extra) s.splice(1,0,extra);
+  return s;
+}
+
+/* 路段資料
+   m: 各交通方式。transit 的 cta = 'rail' | 'ohare' | 'bus'；mtd = 公車段數
+   ux: UberX 估價區間（美元，未含小費）；XL 以 ×1.5 估
+   lug: 是否帶大行李；home: 從住宿出發（加準備時間） */
+function legsFor(day, S){
+  var L = [];
+  if (day===1){
+    var a = S.d1==='A';
+    L.push({
+      id:a?'d1a-ord-gcp':'d1-ord-hi', from:'T5', to:a?'GCP':'HI', title:a?'機場 → Google Cloud 活動（行李同行）':'機場 → HI Chicago 寄放行李', start:'CLEAR', lug:true,
+      by:a?'15:45':null, ev:a?{s:'14:00',e:'18:10',n:'Google Cloud 活動',ag:'議程：15:45 Striim & Google Demo → 16:30 Workshop → 17:00 Happy Hour。'}:null,
+      m:{
+        transit:{lines:a?['ATS','Blue','Green','Walk']:['ATS','Blue','Walk'],min:a?78:75,km:1.0,cta:'ohare',steps:[
+          {t:'出關後在入境大廳（Arrivals）三人集合，確認行李件數，連上機場免費 Wi-Fi。先別急著出門，室內一路走就能到 ATS。',en:'Ground Transportation',zh:'地面交通'},
+          {t:'跟著「Trains to Terminals 1 2 3／Airport Transit System」指標走到第 5 航廈的 ATS 車站（通常要搭電梯或手扶梯上樓）。ATS 免費、24 小時運行，尖峰約 3–5 分鐘一班。',line:'ATS',en:'Airport Transit System',zh:'機場捷運，免費'},
+          {t:'上車後在 Terminal 2 或 Terminal 3 下車（約 5–7 分鐘；O’Hare 官方指引）。',line:'ATS',en:'Terminal 2 / Terminal 3',zh:'第 2 或第 3 航廈下車'},
+          {t:'跟著「Trains to City」指標下到地下層（Basement Level）的行人通道，約 5–8 分鐘到 O’Hare Blue Line 車站。',line:'Blue',en:'Trains to City',zh:'往市區列車'},
+          {t:'若三人已在 Ventra App 把 3-Day Pass 加進各自 iPhone 的 Apple Wallet，這步跳過，直接用 iPhone 靠閘門。否則在閘門前的 Ventra 售票機買票：選「3-Day Ticket」每人 US$15（只有 O’Hare 與 Midway 的機器賣），三人各一張；72 小時從第一次刷卡起算，可用到 11/13 下午，涵蓋 Day 2、Day 3 與 Day 4 早上去 Union Station。也可用信用卡或 Apple Pay 感應，但 O’Hare 上車每人 US$5，而且一張卡一次只付一人。',en:'Buy Ventra Ticket',zh:'Ventra 售票機'},
+          {t:'刷票進閘門。O’Hare 是起點站，所有列車都往市區；車頭顯示「Forest Park」，上任何一班都對。',line:'Blue',en:'Blue Line to Forest Park',zh:'藍線往 Forest Park（經市區）'}
+        ].concat(a?[
+          {t:'約 40–45 分鐘後在「Clark/Lake」下車（廣播 “This is Clark/Lake”）。不要出閘門。',line:'Blue',en:'Clark/Lake',zh:'Clark/Lake 下車轉乘'},
+          {t:'跟「Elevated Trains」指標上樓到高架月台，找往西的「Green Line · Harlem/Lake」或「Pink Line · 54th/Cermak」，兩條都停 Morgan；轉乘免費。',line:'Green',en:'Green Line · Harlem/Lake',zh:'綠線往西'},
+          {t:'坐 2 站（Clinton 之後）在「Morgan」下車。',line:'Green',en:'Morgan',zh:'Morgan 下車'},
+          {t:'下樓到 W Lake St，往西走 1 個路口到 N Carpenter St，右轉往北，210 N Carpenter St 就在 Lake St 北側（約 3 分鐘）。報到出示確認信；先問工作人員大型行李可以放哪裡。',line:'Walk',en:'210 N Carpenter St',zh:'Google Cloud 活動入口'}
+        ]:[
+          {t:'約 45–50 分鐘後在「Jackson」下車（前一站是 Monroe，位於 Dearborn St 下方）。不要坐過到 LaSalle。',line:'Blue',en:'Jackson',zh:'Jackson 站下車'},
+          {t:'出站往東走到 S State St，右轉往南走 2 個路口到 E Ida B Wells Dr，左轉往東約 30 公尺就是 24 E Ida B Wells Dr（約 7 分鐘）。',line:'Walk',en:'24 E Ida B Wells Dr',zh:'HI Chicago 青年旅館'},
+          {t:'到櫃台說 “We’d like to store our luggage before check-in.” 寄放行李，拍下寄物單。筆電、護照、充電器隨身帶。'}
+        ])},
+        uberx:{lines:['ATS','Uber'],min:a?58:60,ux:[45,65],steps:uberSteps('第 2 航廈上層出境樓層（Upper Level Departures）的 Rideshare Pickup 區。第 5 航廈不能叫 Uber，要先搭免費 ATS 到 Terminal 2 再上樓',a?'在 210 N Carpenter St 下車，先問工作人員大型行李可以放哪裡。':'在 24 E Ida B Wells Dr 下車，到櫃台寄放行李。',{t:'也可以不叫 Uber：第 5 航廈下層（Lower Level）有合法計程車排班處，跟「Taxi」指標走，不用搭 ATS。'})},
+        uberxl:{lines:['ATS','Uber'],min:a?58:60,ux:[45,65],xl:true}
+      },
+      fb:[
+        '出關時間比預期晚、或預估抵達活動晚於 16:15：上方切到「A 直接去活動」，行李帶著走，或叫 UberXL 先放行李再去。',
+        'ATS 暫停：跟「Shuttle Bus」指標搭機場免費接駁巴士到 Terminal 2。',
+        'Blue Line 延誤：看月台螢幕或 CTA Train Tracker；等超過 15 分鐘就回 Terminal 2 上層叫 Uber。',
+        '三日券售票機故障：用信用卡感應進站（每人 US$5），市區任何車站都能補買 1-Day Pass。'
+      ]
+    });
+    if (!a) L.push({
+      id:'d1-hi-gcp', from:'HI', to:'GCP', title:'HI Chicago → Google Cloud 活動', after:15, by:'15:45', ev:{s:'14:00',e:'18:10',n:'Google Cloud 活動',ag:'議程：15:45 Striim & Google Demo → 16:30 Workshop → 17:00 Happy Hour。'},
+      m:{
+        transit:{lines:['Walk','Green','Walk'],min:27,km:0.9,cta:'rail',steps:[
+          {t:'從 HI Chicago 大門出來，往東走到 S Wabash Ave，左轉往北走 3 個路口到 E Adams St（約 6 分鐘）。',line:'Walk',en:'S Wabash Ave → E Adams St',zh:'沿 Wabash 往北'},
+          {t:'上樓進 Adams/Wabash 高架車站，刷三日券進站。',line:'Green',en:'Adams/Wabash',zh:'Adams/Wabash 站'},
+          {t:'找寫著「Green Line · Harlem/Lake」的月台（往北再往西出 Loop）。只搭 Green Line。',line:'Green',en:'Green Line · Harlem/Lake',zh:'綠線往 Harlem/Lake'},
+          {t:'約 10–12 分鐘，在「Morgan」下車（Clinton 的下一站）。',line:'Green',en:'Morgan',zh:'Morgan 下車'},
+          {t:'下樓到 W Lake St，往西 1 個路口到 N Carpenter St 右轉，210 N Carpenter St 在 Lake St 北側（約 3 分鐘）。報到出示確認信，護照備查。',line:'Walk',en:'210 N Carpenter St',zh:'活動入口'}
+        ]},
+        walk:{lines:['Walk'],min:42,km:3.2,steps:[
+          {t:'沿 E Ida B Wells Dr 往西，過 State St 後改走 W Van Buren St 往西過芝加哥河。',line:'Walk',en:'W Van Buren St',zh:'沿 Van Buren 往西'},
+          {t:'到 S Halsted St 右轉往北，再到 W Lake St 左轉往西，到 N Carpenter St 右轉。全程約 3.2 公里，用下方「步行導航」確認。',line:'Walk',en:'N Carpenter St',zh:'Carpenter St 右轉'}
+        ]},
+        uberx:{lines:['Uber'],min:18,ux:[12,18],steps:uberSteps('HI Chicago 正門 E Ida B Wells Dr 路邊','在 210 N Carpenter St 下車。')},
+        uberxl:{lines:['Uber'],min:18,ux:[12,18],xl:true}
+      },
+      fb:['錯過綠線：下一班通常 10 分鐘內；也可在 Washington/Wabash 站搭。','16:30 前趕不到：直接叫 Uber，Workshop 16:30 開始。']
+    });
+    L.push({
+      id:'d1-gcp-dbx', from:'GCP', to:'DBX', title:'Google Cloud → Databricks（步行）', start:'18:05', by:'18:15', lug:a,
+      m:{
+        walk:{lines:['Walk'],min:9,km:0.7,steps:[
+          {t:'18:05 離開會場（步行約 9 分鐘，18:10 才走會遲到幾分鐘）。從 210 N Carpenter St 往南走到 W Lake St 路口。',line:'Walk',en:'W Lake St',zh:'走到 Lake St'},
+          {t:'右轉沿 W Lake St 往西走，頭上是高架鐵道（Green/Pink Line）。經過 N Racine Ave 後再走約 2 個路口，Loomis St 之前。',line:'Walk',en:'W Lake St → 1366',zh:'沿 Lake St 往西'},
+          {t:'1366 W Lake St（Loft on Lake）到達。報到出示確認信條碼。',line:'Walk',en:'Loft on Lake',zh:'Databricks 活動入口'}
+        ]},
+        uberx:{lines:['Uber'],min:7,ux:[8,12],steps:uberSteps('210 N Carpenter St 門口','在 1366 W Lake St 下車。')}
+      },
+      fb:['Lake St 晚上人多、照明好；三人一起走。下雨或行李重就叫 Uber。']
+    });
+    L.push({
+      id:'d1-dbx-hi', from:'DBX', to:'HI', title:a?'Databricks → HI Chicago 入住':'Databricks → HI Chicago', start:'21:00', lug:a,
+      m:{
+        transit:{lines:['Walk','Green','Walk'],min:32,km:0.9,cta:'rail',steps:[
+          {t:'沿 W Lake St 往西走到 N Ashland Ave（約 4 分鐘）。',line:'Walk',en:'Lake St & Ashland Ave',zh:'走到 Ashland'},
+          {t:'上樓進 Ashland 高架車站，找往東「Green Line · Ashland/63rd」或「Cottage Grove」的月台（往 Loop）。',line:'Green',en:'Green Line · to Loop',zh:'綠線往東進市區'},
+          {t:'約 15 分鐘，在「Adams/Wabash」下車（Washington/Wabash 的下一站）。',line:'Green',en:'Adams/Wabash',zh:'Adams/Wabash 下車'},
+          {t:'下樓沿 S Wabash Ave 往南走 3 個路口到 E Ida B Wells Dr，右轉往西 30 公尺就是 HI Chicago（約 6 分鐘）。',line:'Walk',en:'24 E Ida B Wells Dr',zh:'HI Chicago'}
+        ]},
+        uberx:{lines:['Uber'],min:18,ux:[14,22],steps:uberSteps('1366 W Lake St 門口','在 24 E Ida B Wells Dr 下車。')},
+        uberxl:{lines:['Uber'],min:18,ux:[14,22],xl:true}
+      },
+      fb:['21:00 後綠線約 10–15 分鐘一班，等車時站在月台中段、有其他乘客的地方。','累了或下雨就叫 Uber，三人分攤每人約 US$5–8。']
+    });
+  }
+  if (day===2){
+    var q = S.d2==='qccs', dest = q?'QCCS':'NU';
+    L.push({
+      id:q?'d2-hi-qccs':'d2-hi-nu', from:'HI', to:dest, title:'HI Chicago → '+(q?'Technological Institute（QCCS）':'Northwestern Levy Atrium'), start:q?'10:25':'09:55', by:q?'12:00':'11:30', home:true,
+      m:{
+        transit:{lines:['Walk','Red','Purple','Walk'],min:q?70:72,km:1.3,cta:'rail',steps:[
+          {t:'從 HI Chicago 往西走到 S State St，左轉往南 1 個路口，Harrison 站入口在 State St 與 Harrison St 路口（地下，約 3 分鐘）。',line:'Walk',en:'Harrison',zh:'紅線 Harrison 站'},
+          {t:'刷三日券進站，找「Red Line · Howard」的月台（往北）。',line:'Red',en:'Red Line · Howard',zh:'紅線往北 Howard'},
+          {t:'坐約 35–40 分鐘到「Howard」（Red Line 北端終點）。',line:'Red',en:'Howard',zh:'Howard 下車轉乘'},
+          {t:'不出閘門，在 Howard 站換搭「Purple Line · Linden」（往北進 Evanston），轉乘免費。',line:'Purple',en:'Purple Line · Linden',zh:'紫線往 Linden'},
+          q?{t:'坐約 10 分鐘，在「Noyes」下車（Foster 的下一站）。',line:'Purple',en:'Noyes',zh:'Noyes 下車'}
+           :{t:'坐約 8–10 分鐘，在「Foster」下車（South Blvd → Main → Dempster → Davis → Foster）。',line:'Purple',en:'Foster',zh:'Foster 下車'},
+          q?{t:'沿 Noyes St 往東直走到 Sheridan Rd，Technological Institute 在 2145 Sheridan Rd（約 12 分鐘）。依 QCCS 指標找會議室。',line:'Walk',en:'2145 Sheridan Rd',zh:'Technological Institute'}
+           :{t:'沿 Foster St 往東直走到 Sheridan Rd 路口（約 12–15 分鐘），轉角就是 2001 Sheridan Rd（原 Jacobs Center，2026 年翻新）。找 “Trienens Institute Annual Meeting” 指標到 Levy Atrium。',line:'Walk',en:'2001 Sheridan Rd · Levy Atrium',zh:'活動會場'},
+          {t:q?'報到時出示 QCCS 報名紀錄。':'報到報英文全名，說明 “I registered through the online form.”。若被告知限會員，禮貌詢問能否旁聽公開場次，不行就切到上方「備案 QCCS」。'}
+        ]},
+        uberx:{lines:['Uber'],min:48,ux:[35,55],steps:uberSteps('HI Chicago 正門 E Ida B Wells Dr 路邊',q?'在 2145 Sheridan Rd 下車。':'在 2001 Sheridan Rd（Sheridan Rd 與 Foster St 轉角）下車。')},
+        uberxl:{lines:['Uber'],min:48,ux:[35,55],xl:true}
+      },
+      alt:'Metra 備案：Ogilvie Transportation Center（500 W Madison St）搭 UP-N 線到 Davis St 站約 25 分鐘，離峰約每小時一班；CTA 三日券不適用 Metra，票價在 Ventra App 購買時顯示。Davis St 站走到 2001 Sheridan Rd 約 15–18 分鐘。',
+      fb:['10:50 還在 Red Line 上：到 Howard 站出站改叫 Uber（約 10–15 分鐘到校園）。','被拒絕入場：切換「備案 QCCS」，Technological Institute 走路約 10 分鐘。']
+    });
+    L.push({
+      id:q?'d2-qccs-uic':'d2-nu-uic', from:dest, to:'UIC', title:(q?'QCCS':'Northwestern')+' → UIC（IEEE × ACM）', start:q?'16:00':'16:45', by:'17:30', ev:{s:'17:30',e:'19:30',n:'IEEE × ACM（18:00 講座開始）'},
+      m:{
+        transit:{lines:['Walk','Purple','Red','Blue','Walk'],min:92,km:1.9,cta:'rail',steps:[
+          {t:(q?'沿 Noyes St 往西走回 Noyes 站':'沿 Foster St 往西走回 Foster 站')+'（約 12–15 分鐘）。',line:'Walk',en:q?'Noyes':'Foster',zh:'走回紫線車站'},
+          {t:'搭「Purple Line · Howard」往南。若來的是寫著「Loop」的 Purple Line Express，也可上車，但下面的轉乘要改在 Belmont 換 Red Line。',line:'Purple',en:'Purple Line · Howard',zh:'紫線往南 Howard'},
+          {t:'在「Howard」換「Red Line · 95th/Dan Ryan」（往南進市區）。',line:'Red',en:'Red Line · 95th/Dan Ryan',zh:'紅線往南'},
+          {t:'坐約 40 分鐘，在「Jackson」下車（Monroe 的下一站）。',line:'Red',en:'Jackson',zh:'Jackson 下車轉藍線'},
+          {t:'不出閘門，跟「Blue Line / Transfer」指標走站內地下通道到 Blue Line Jackson 月台（約 5 分鐘）。',line:'Blue',en:'Transfer to Blue Line',zh:'轉乘藍線通道'},
+          {t:'搭「Blue Line · Forest Park」往西，LaSalle → Clinton → 第 3 站「UIC-Halsted」下車。',line:'Blue',en:'UIC-Halsted',zh:'UIC-Halsted 下車'},
+          {t:'出站到 S Halsted St，往南走到 W Taylor St 右轉往西，850 W Taylor St（CDRLC）約 10 分鐘。進大樓找 Room 1413。',line:'Walk',en:'CDRLC Room 1413',zh:'IEEE 講座教室'}
+        ]},
+        uberx:{lines:['Uber'],min:60,ux:[40,65],steps:uberSteps(q?'2145 Sheridan Rd 門口':'2001 Sheridan Rd 門口（Sheridan Rd 路邊）','在 850 W Taylor St 下車，進大樓找 Room 1413。')},
+        uberxl:{lines:['Uber'],min:60,ux:[40,65],xl:true}
+      },
+      fb:['依原計畫 16:45 搭 CTA 離開，約 18:15–18:20 才到，會錯過 17:30 Networking 與 18:00 開場。','想準時 17:30：NVIDIA 講座 16:15 結束後立刻叫 Uber，尖峰約 50–70 分鐘。','真的趕不上：先用 vTools 確認信裡的 Zoom 連結聽，到現場再參加 19:00 後交流。']
+    });
+    L.push({
+      id:'d2-uic-hi', from:'UIC', to:'HI', title:'UIC → HI Chicago', start:'19:30',
+      m:{
+        transit:{lines:['Walk','Blue','Walk'],min:30,km:1.4,cta:'rail',steps:[
+          {t:'沿 W Taylor St 往東走到 S Halsted St 左轉往北，走到 UIC-Halsted 站（約 10 分鐘）。晚上走 Halsted St 主要道路。',line:'Walk',en:'UIC-Halsted',zh:'藍線 UIC-Halsted'},
+          {t:'搭「Blue Line · O’Hare」（往市區方向）。',line:'Blue',en:'Blue Line · O’Hare',zh:'藍線往市區'},
+          {t:'Clinton → LaSalle → 第 3 站「Jackson」下車。',line:'Blue',en:'Jackson',zh:'Jackson 下車'},
+          {t:'往東走到 S State St 右轉往南 2 個路口到 E Ida B Wells Dr，左轉就到 HI Chicago（約 7 分鐘）。',line:'Walk',en:'24 E Ida B Wells Dr',zh:'HI Chicago'}
+        ]},
+        uberx:{lines:['Uber'],min:15,ux:[12,18],steps:uberSteps('850 W Taylor St 門口','在 24 E Ida B Wells Dr 下車。')},
+        uberxl:{lines:['Uber'],min:15,ux:[12,18],xl:true}
+      },
+      fb:['晚上藍線約 8–15 分鐘一班。月台人少時可叫 Uber，三人分攤每人約 US$5。']
+    });
+  }
+  if (day===3){
+    var aud = S.d3==='aud' && S.audOk;
+    L.push({
+      id:'d3-hi-amz', from:'HI', to:'AMZ', title:'HI Chicago → Amazon ORD10', start:'12:10', by:'12:45', home:true, pref:'walk',
+      m:{
+        walk:{lines:['Walk'],min:18,km:1.4,steps:[
+          {t:'從 HI Chicago 往西走到 S State St，右轉往北走 4 個路口（Van Buren、Jackson、Adams、Monroe）。',line:'Walk',en:'S State St → W Monroe St',zh:'沿 State St 往北'},
+          {t:'在 W Monroe St 左轉往西，經過 Dearborn、Clark、LaSalle、Wells。',line:'Walk',en:'W Monroe St',zh:'沿 Monroe St 往西'},
+          {t:'過 N Wells St 後就是 227 W Monroe St（The Franklin，Wells 與 Franklin 之間）。',line:'Walk',en:'227 W Monroe St',zh:'The Franklin 大樓'},
+          {t:'一樓 Guest Services 櫃台出示 Franklin Guest Services 寄來的 QR Code＋護照開通，過閘門搭電梯上 14 樓 Suite 1400，找 Rooms 14.102–14.103。',en:'Guest Services · 14th Floor',zh:'大樓訪客櫃台 → 14 樓'}
+        ]},
+        transit:{lines:['Walk','Blue','Walk'],min:16,km:0.9,cta:'rail',steps:[
+          {t:'走到 Jackson（Blue Line）站：往西到 State St、往北 2 個路口到 Jackson Blvd，再往西 1 個路口到 Dearborn St（約 7 分鐘）。',line:'Walk',en:'Jackson (Blue)',zh:'藍線 Jackson 站'},
+          {t:'搭「Blue Line · O’Hare」，下一站「Monroe」下車。',line:'Blue',en:'Monroe',zh:'Monroe 下車'},
+          {t:'出站沿 W Monroe St 往西走 3 個路口到 227 W Monroe St（約 6 分鐘），一樓出示 QR Code＋護照。',line:'Walk',en:'227 W Monroe St',zh:'Amazon 大樓'}
+        ]},
+        uberx:{lines:['Uber'],min:10,ux:[9,14],steps:uberSteps('HI Chicago 正門','在 227 W Monroe St 下車，一樓出示 QR Code＋護照。')}
+      },
+      fb:['QR Code 打不開：出示 Luma 確認信與護照，請櫃台查名單（“I’m registered for the AWS Quick User Group on 14.”）。','遲到：直接上樓，Workshop 3 小時，進場後找空位。']
+    });
+    if (aud){
+      L.push({id:'d3-amz-aud',from:'AMZ',to:'AUD',title:'Amazon → AI Under Debate（步行）',start:'17:15',by:'17:30',m:{
+        walk:{lines:['Walk'],min:8,km:0.6,steps:[
+          {t:'從 227 W Monroe St 沿 W Monroe St 往東走約 4 個路口到 State St。',line:'Walk',en:'W Monroe St',zh:'沿 Monroe 往東'},
+          {t:'1 W Monroe St 在 State St 與 Monroe St 路口。依 Luma 確認信報到。',line:'Walk',en:'1 W Monroe St',zh:'AI Under Debate'}
+        ]}},fb:['候補沒轉正就不要去：到「設定」關掉切換。']});
+      L.push({id:'d3-aud-hi',from:'AUD',to:'HI',title:'AI Under Debate → HI Chicago（步行）',start:'20:30',m:{
+        walk:{lines:['Walk'],min:10,km:0.8,steps:[
+          {t:'沿 S State St 往南走 4 個路口到 E Ida B Wells Dr，左轉就是 HI Chicago。State St 晚上人多、燈光亮。',line:'Walk',en:'S State St',zh:'沿 State St 往南'}
+        ]},
+        uberx:{lines:['Uber'],min:6,ux:[8,12],steps:uberSteps('1 W Monroe St 門口','在 24 E Ida B Wells Dr 下車。')}
+      },fb:[]});
+    } else {
+      L.push({
+        id:'d3-amz-wbx', from:'AMZ', to:'WBX', title:'Amazon → Workbox River North', start:'16:15', by:'18:00',
+        m:{
+          transit:{lines:['Walk','Brown','Walk'],min:28,km:0.8,cta:'rail',steps:[
+            {t:'從 227 W Monroe St 走到 N Wells St，左轉往南 2 個路口到 Quincy 站（高架，Wells St 與 Quincy St 路口，約 4 分鐘）。',line:'Walk',en:'Quincy',zh:'Quincy 站'},
+            {t:'找「Brown Line · Kimball」月台。列車會先繞 Loop 一圈（下一站 LaSalle/Van Buren 是正常的）再往北。',line:'Brown',en:'Brown Line · Kimball',zh:'棕線往 Kimball'},
+            {t:'經 Merchandise Mart 後，在「Chicago」站下車（約 15 分鐘）。',line:'Brown',en:'Chicago (Brown/Purple)',zh:'Chicago 站下車'},
+            {t:'下樓到 W Chicago Ave 與 N Franklin St，沿 Franklin St 往南走 3 個短路口到 W Erie St，306 W Erie St 就在轉角（約 5 分鐘）。Ste 300 依大廳指示上樓。',line:'Walk',en:'306 W Erie St · Ste 300',zh:'Workbox River North'}
+          ]},
+          walk:{lines:['Walk'],min:27,km:2.1,steps:[
+            {t:'沿 N Wells St 往北走，過芝加哥河上的 Wells St Bridge。',line:'Walk',en:'N Wells St',zh:'沿 Wells 往北過河'},
+            {t:'繼續往北到 W Erie St 左轉，走 1 個路口到 306 W Erie St。',line:'Walk',en:'306 W Erie St',zh:'Workbox River North'}
+          ]},
+          uberx:{lines:['Uber'],min:12,ux:[10,15],steps:uberSteps('227 W Monroe St 門口','在 306 W Erie St 下車。')}
+        },
+        alt:'16:00–18:00 有空檔：可在 River North 咖啡廳整理筆記，或線上聽 UIUC IMMERSE 講座（16:00–17:00，活動頁有 Join online 連結）。',
+        fb:['搭錯方向（車頭不是 Kimball）：下一站下車到對面月台。','改搭 Red Line：Monroe（State St）上車往 Howard，Grand 站下車往西走 10 分鐘。']
+      });
+      L.push({
+        id:'d3-wbx-hi', from:'WBX', to:'HI', title:'Workbox → HI Chicago（晚間）', start:'20:00',
+        m:{
+          transit:{lines:['Walk','Brown','Walk'],min:28,km:0.8,cta:'rail',steps:[
+            {t:'沿 N Franklin St 往北走回 Chicago 站（約 5 分鐘）。',line:'Walk',en:'Chicago (Brown/Purple)',zh:'Chicago 站'},
+            {t:'搭「Brown Line · Loop」往南進市區。',line:'Brown',en:'Brown Line · Loop',zh:'棕線往 Loop'},
+            {t:'Merchandise Mart → Washington/Wells → Quincy → LaSalle/Van Buren，下一站「Harold Washington Library-State/Van Buren」下車（約 12 分鐘）。',line:'Brown',en:'Harold Washington Library',zh:'圖書館站下車'},
+            {t:'下樓到 S State St 往南 1 個路口到 E Ida B Wells Dr，左轉就是 HI Chicago（約 3 分鐘）。',line:'Walk',en:'24 E Ida B Wells Dr',zh:'HI Chicago'}
+          ]},
+          uberx:{lines:['Uber'],min:15,ux:[12,18],steps:uberSteps('306 W Erie St 門口','在 24 E Ida B Wells Dr 下車。')},
+          uberxl:{lines:['Uber'],min:15,ux:[12,18],xl:true}
+        },
+        fb:['晚間安全：三人一起走、手機不要拿在路邊滑；Brown Line 晚上約 10–15 分鐘一班。','24 小時備案：走到 Grand（Red Line，State St 與 Grand Ave）搭往 95th，Harrison 下車。']
+      });
+    }
+  }
+  if (day===4){
+    L.push({
+      id:'d4-hi-cus', from:'HI', to:'CUS', title:'HI Chicago → Union Station（帶行李）', start:'07:00', by:'07:50', hard:'08:10', home:true, lug:true,
+      m:{
+        transit:{lines:['Walk','Blue','Walk'],min:23,km:1.0,cta:'rail',steps:[
+          {t:'07:00 退房出發。往西到 S State St，右轉往北 2 個路口到 W Jackson Blvd，再往西 1 個路口到 Dearborn St 的 Jackson（Blue Line）站入口（約 8 分鐘）。',line:'Walk',en:'Jackson (Blue)',zh:'藍線 Jackson 站'},
+          {t:'刷三日券（11/10 下午啟用的話，到 11/13 下午前都有效）。找「Blue Line · Forest Park」月台。',line:'Blue',en:'Blue Line · Forest Park',zh:'藍線往西'},
+          {t:'LaSalle 之後，第 2 站「Clinton」下車（約 4 分鐘）。',line:'Blue',en:'Clinton',zh:'Clinton 下車'},
+          {t:'出站到 S Clinton St，往北走 2 個路口（Van Buren、Jackson）到 W Jackson Blvd（約 5 分鐘），從「Union Station」入口進 Great Hall。',line:'Walk',en:'Union Station · Great Hall',zh:'聯合車站大廳'}
+        ]},
+        uberxl:{lines:['Uber'],min:14,ux:[14,20],xl:true,steps:uberSteps('HI Chicago 正門','在 Union Station 下車（225 S Canal St 入口），進 Great Hall。')},
+        uberx:{lines:['Uber'],min:14,ux:[14,20]},
+        walk:{lines:['Walk'],min:28,km:2.0,steps:[
+          {t:'往北走到 W Jackson Blvd，沿 Jackson Blvd 一路往西，過芝加哥河後就是 Union Station（拖行李約 28 分鐘）。',line:'Walk',en:'W Jackson Blvd',zh:'沿 Jackson 往西'}
+        ]}
+      },
+      fb:['07:20 還沒出門：直接叫 UberXL。','車站在 08:13 前一定要到月台；Amtrak 開車前幾分鐘就關門。']
+    });
+    L.push({
+      id:'d4-amtrak391', from:'CUS', to:'ITC', title:'Amtrak 391：芝加哥 → Champaign', start:'08:15', fixed:'08:15', arr:'10:47', train:true, lug:true,
+      m:{
+        amtrak:{lines:['Amtrak'],min:152,steps:[
+          {t:'07:45 前進 Great Hall。找「Departures」大型看板，找 “391 Saluki”（終點 Carbondale 或 Champaign-Urbana）。',line:'Amtrak',en:'Departures · 391 Saluki',zh:'出發看板找 391'},
+          {t:'打開 Amtrak App 或 Email 的 eTicket（QR Code），三人的票都要能出示；先截圖存相簿，地下層訊號弱。',en:'eTicket',zh:'電子車票'},
+          {t:'Amtrak 不用另外報到。看看板上的 Gate 與 Status，開車前約 15–30 分鐘會廣播 “Now boarding train 391”，到指定 Gate 排隊。',line:'Amtrak',en:'Gate · Now Boarding',zh:'到登車口排隊'},
+          {t:'在 Gate 出示 eTicket，沿月台走到列車；工作人員可能依目的地指定車廂，聽從指示。',line:'Amtrak',en:'Track · Coach',zh:'月台與車廂'},
+          {t:'Coach 不劃位，找相鄰空位坐。大行李放車廂端的行李架，小件放頭頂。每人可帶 2 件手提行李（每件 ≤ 50 lb、28×22×14 in）＋1 件個人物品（≤ 25 lb、14×11×7 in），超過的每件加收 US$20。',en:'Coach Seating',zh:'自由入座'},
+          {t:'列車長會掃 eTicket，可能在座位上方夾一張寫著目的地的小卡（CHM），不要拿掉。',en:'Ticket check',zh:'查票'},
+          {t:'過 Rantoul 後廣播 “Next stop, Champaign-Urbana”，提早收好行李到車門。預計 10:47 抵達（官方時刻表 10:49）。',line:'Amtrak',en:'Champaign-Urbana',zh:'Champaign 下車'},
+          {t:'下車後跟「Exit」指標下樓到 Illinois Terminal 一樓大廳。MTD 公車在同一棟，出口在 E University Ave。',line:'Walk',en:'Illinois Terminal',zh:'Champaign 轉運站'}
+        ]}
+      },
+      alt:'巴士備案：Peoria Charter 從芝加哥市區（S Desplaines St，Congress 與 Tilden 之間、I-290 下方）開往 Champaign，2026 年官網單程線上票約 US$47；班表請在 peoriacharter.com 查詢當天時刻。',
+      fb:['錯過 391：同日下一班是 Amtrak 393（約 16:05 開、18:36 到），會錯過 17:00 報到與晚餐；先看 Peoria Charter 有沒有中午班次，並 Email 主辦說明會晚到。','誤點：用 Amtrak App「Track Your Train」看即時位置，延誤超過 1 小時就先通知黑客松主辦。','停駛：Amtrak 會發簡訊或 Email，通常安排替代巴士；到 Great Hall 的 Amtrak 服務櫃台詢問。']
+    });
+    L.push({
+      id:'d4-itc-grl', from:'ITC', to:'GRL', title:'Illinois Terminal → 校園（Grainger Library）', start:'11:00', lug:true, pref:'xl',
+      m:{
+        uberx:{lines:['Uber'],min:10,ux:[8,13],steps:uberSteps('Illinois Terminal 正門 E University Ave 路邊','在 1301 W Springfield Ave（Grainger Engineering Library）下車。有大行李的話，先請司機改停 Champaign 住宿寄放。')},
+        uberxl:{lines:['Uber'],min:10,ux:[8,13],xl:true},
+        transit:{lines:['MTD','Walk'],min:28,km:0.5,mtd:1,steps:[
+          {t:'在 Illinois Terminal 一樓看 MTD 即時看板，或打開 Transit App（MTD 合作 App，內建 Token Transit 買票），目的地輸入 Grainger Engineering Library。',line:'MTD',en:'MTD Departures',zh:'MTD 公車看板'},
+          {t:'依 App 建議的路線與月台（Platform）上車，通常是往校園、經 Green St 或 Wright St 的路線，以當下顯示為準。',line:'MTD',en:'To Campus',zh:'往校園'},
+          {t:'付款每人 US$1：投零錢或 1 元紙鈔（司機 19:00 前最多找零 US$5，最好備零錢），或用 Token Transit「1 Ride」上車前啟用給司機看。沒有 UIUC i-Card 不能免費搭。要換車就向司機要 free transfer slip。',en:'Fare $1',zh:'車資 1 美元'},
+          {t:'依 App 提示下車，步行到 1301 W Springfield Ave。',line:'Walk',en:'Grainger Engineering Library',zh:'工程圖書館'}
+        ]},
+        walk:{lines:['Walk'],min:35,km:2.8,steps:[
+          {t:'沿 E University Ave 往東走進 Urbana，再轉 Wright St、Springfield Ave。約 2.8 公里，用下方步行導航；拖行李不建議。',line:'Walk',en:'W Springfield Ave',zh:'步行到校園'}
+        ]}
+      },
+      alt:'帶著大行李逛校園很辛苦：先在「設定」填 Champaign 住宿地址，用 UberXL 先去住宿寄放，再到校園。',
+      fb:['MTD 班距 10–30 分鐘；等超過 15 分鐘就改叫 Uber。']
+    });
+    L.push({
+      id:'d4-campus', from:'GRL', to:'CSL', title:'UIUC 校園步行參訪', start:'11:20', by:'16:00', tour:true,
+      m:{
+        walk:{lines:['Walk'],min:15,km:1.0,steps:[
+          {t:'11:20 Grainger Engineering Library（1301 W Springfield Ave）：一樓公共區域可進入，看工程圖書館與自習空間。',line:'Walk',en:'Grainger Engineering Library',zh:'工程圖書館'},
+          {t:'12:00 午餐：Green St 一帶店家多，或回 Grainger 附近簡單吃。',en:'Lunch · Green St',zh:'午餐'},
+          {t:'13:00 Siebel Center for Computer Science（201 N Goodwin Ave）：步行 3–5 分鐘。大廳與公共走廊可參觀，研究室需刷卡。',line:'Walk',en:'Siebel Center for CS',zh:'資工系館'},
+          {t:'14:15 NCSA（1205 W Clark St）：從 Siebel 往北步行約 2 分鐘。看大廳展示，內部區域依現場規定。',line:'Walk',en:'NCSA',zh:'國家超級計算應用中心'},
+          {t:'15:00 Coordinated Science Laboratory（1308 W Main St）：從 NCSA 往西步行約 2 分鐘。Siebel、NCSA、CSL 平日約 08:00／08:30–17:00 開放，16:00 前參觀完。',line:'Walk',en:'Coordinated Science Laboratory',zh:'CSL 協調科學實驗室'},
+          {t:'16:00 準備前往黑客松會場（下一段）。',en:'Leave by 16:00',zh:'16:00 出發'}
+        ]}
+      },
+      fb:['大樓鎖門或需刷卡：只在公共區域拍照，不跟著學生刷卡進門。','時間不夠：優先順序 Siebel → CSL → NCSA → Grainger。']
+    });
+    L.push({
+      id:'d4-csl-jd', from:'CSL', to:'JD', title:'校園 → John Deere TIC（黑客松）', start:'16:00', by:'17:00',
+      m:{
+        transit:{lines:['Walk','MTD','Walk'],min:30,km:0.6,mtd:1,steps:[
+          {t:'打開 Transit App，目的地輸入 “John Deere Technology Innovation Center”。平日白天的「24 Link」約 15 分鐘一班，連接工程校區與 Research Park；也可能建議 Yellow 線（First St）。',line:'MTD',en:'24 Link · Research Park',zh:'往 Research Park'},
+          {t:'到 App 指示的站牌上車，付 US$1（零錢或 Token Transit）。',line:'MTD',en:'Fare $1',zh:'車資 1 美元'},
+          {t:'在 Research Park／First St 一帶下車，步行到 2021 S 1st St Ste 101。',line:'Walk',en:'2021 S 1st St · Ste 101',zh:'黑客松會場'},
+          {t:'17:00 報到：報英文全名，出示報名確認信與證件，領名牌。問主辦大型行李能否放在會場。'}
+        ]},
+        uberx:{lines:['Uber'],min:12,ux:[9,14],steps:uberSteps('CSL（1308 W Main St）門口','在 2021 S 1st St 下車，找 Suite 101 入口。')},
+        uberxl:{lines:['Uber'],min:12,ux:[9,14],xl:true},
+        walk:{lines:['Walk'],min:50,km:4.0,steps:[{t:'沿 Goodwin Ave／First St 往南約 4 公里。時間夠且天氣好才建議。',line:'Walk',en:'S 1st St',zh:'沿 First St 往南'}]}
+      },
+      fb:['16:30 還在等車：直接叫 Uber（約 10 分鐘）。']
+    });
+    L.push({
+      id:'d4-jd-chl', from:'JD', to:'CHL', title:'黑客松 → Champaign 住宿（24:00 後）', start:'24:00', pref:'uberx',
+      m:{
+        uberx:{lines:['Uber'],min:12,ux:[9,16],steps:uberSteps('2021 S 1st St 會場門口（在室內等到司機快到再出去）','到住宿門口下車，看著同伴進門再離開。')},
+        uberxl:{lines:['Uber'],min:12,ux:[9,16],xl:true},
+        transit:{lines:['MTD'],min:30,mtd:1,steps:[
+          {t:'深夜 MTD 班次很少或已停駛，出發前在 Transit App 確認還有車；沒有就叫 Uber 或計程車。',line:'MTD',en:'Late Night Service',zh:'深夜班次'}
+        ]}
+      },
+      fb:['Uber 叫不到：打給 Champaign 當地合法計程車行（在 Google Maps 搜尋 “taxi Champaign” 找有營業執照、評價多的車行），或請主辦協助。','三人一起行動，不要有人單獨走夜路。']
+    });
+  }
+  if (day===5){
+    L.push({
+      id:'d5-chl-jd', from:'CHL', to:'JD', title:'住宿 → 黑客松（早上）', start:'07:15', by:'08:00', home:true,
+      m:{
+        uberx:{lines:['Uber'],min:12,ux:[9,16],steps:uberSteps('住宿正門','在 2021 S 1st St 下車。')},
+        transit:{lines:['MTD','Walk'],min:30,mtd:1,steps:[
+          {t:'週六路線編號不同（例如平日 1 Yellow，晚間與週末為 100 Yellow），班距較長；用 Transit App 查從住宿到 2021 S 1st St 的實際班次。',line:'MTD',en:'Weekend Service',zh:'週末班次'},
+          {t:'週六可向司機買 All-Day Pass，每人 US$2，當天無限次搭乘；或單程 US$1。',en:'Saturday All-Day Pass $2',zh:'週六一日券 2 美元'},
+          {t:'在 Research Park／First St 下車，走到 Suite 101。',line:'Walk',en:'2021 S 1st St',zh:'會場'}
+        ]}
+      },
+      fb:['公車晚來：08:00 開放、不必準點，晚 10–15 分鐘沒關係；真的趕就叫 Uber。']
+    });
+    L.push({
+      id:'d5-jd-chl', from:'JD', to:'CHL', title:'黑客松 → 住宿（22:00 後）', start:'22:00', pref:'uberx',
+      m:{
+        uberx:{lines:['Uber'],min:12,ux:[9,16],steps:uberSteps('會場門口（先在室內等）','到住宿門口下車。')},
+        uberxl:{lines:['Uber'],min:12,ux:[9,16],xl:true},
+        transit:{lines:['MTD'],min:35,mtd:1,steps:[{t:'週六晚間班次少，22:00 後先查 Transit App；沒有合適班次就叫 Uber。',line:'MTD',en:'Evening Service',zh:'晚間班次'}]}
+      },
+      fb:['22:00 後建議一律叫 Uber 或合法計程車，三人同車。','把貴重設備（Jetson、筆電）全部帶回，不留在會場。']
+    });
+  }
+  if (day===6){
+    L.push({
+      id:'d6-chl-jd', from:'CHL', to:'JD', title:'退房 → 黑客松決賽（帶行李）', start:'08:25', by:'09:00', home:true, lug:true, pref:'xl',
+      m:{
+        uberxl:{lines:['Uber'],min:12,ux:[9,16],xl:true,steps:uberSteps('住宿正門','在 2021 S 1st St 下車，問主辦行李可以放哪裡。')},
+        uberx:{lines:['Uber'],min:12,ux:[9,16]},
+        transit:{lines:['MTD'],min:35,mtd:1,steps:[{t:'週日班距長，帶行李不建議；若要搭，先用 Transit App 查班次。週日也可買 US$2 All-Day Pass。',line:'MTD',en:'Sunday Service',zh:'週日班次'}]}
+      },
+      fb:['退房前確認 Jetson、電源、轉接頭全部打包。']
+    });
+    L.push({
+      id:'d6-jd-itc', from:'JD', to:'ITC', title:'黑客松 → Illinois Terminal（Amtrak 392）', start:'17:15', by:'18:40', hard:'19:03', lug:true, pref:'xl',
+      m:{
+        uberxl:{lines:['Uber'],min:12,ux:[9,15],xl:true,steps:uberSteps('2021 S 1st St 會場門口','在 Illinois Terminal（45 E University Ave）下車，進一樓大廳。')},
+        uberx:{lines:['Uber'],min:12,ux:[9,15]},
+        transit:{lines:['MTD','Walk'],min:35,mtd:1,steps:[
+          {t:'週末路線編號與班距和平日不同，可能 30 分鐘以上一班；先用 Transit App 確認 17:15–18:00 有往 Illinois Terminal 的車才搭。',line:'MTD',en:'Yellow · Illinois Terminal',zh:'黃線往 Illinois Terminal'},
+          {t:'付 US$1 或出示當天 All-Day Pass；終點 Illinois Terminal 下車。',line:'MTD',en:'Illinois Terminal',zh:'下車'}
+        ]}
+      },
+      fb:['頒獎延後：最晚 18:45 從會場出發（叫 Uber 約 10 分鐘），18:55 前到月台。','真的趕不上 392：改搭 Peoria Charter 直達 O’Hare（見下一段的巴士方案），或在 Champaign 多住一晚、11/16 清早搭 Amtrak 390／巴士，務必算好 CX807 報到時間。']
+    });
+    L.push({
+      id:'d6-amtrak392', from:'ITC', to:'CUS', title:'Amtrak 392：Champaign → 芝加哥', start:'19:08', fixed:'19:08', arr:'21:45', train:true, lug:true,
+      m:{
+        amtrak:{lines:['Amtrak'],min:157,steps:[
+          {t:'18:40 前到 Illinois Terminal。依站內指標找 Amtrak 候車區，看螢幕上 Train 392 的狀態。',line:'Amtrak',en:'Amtrak · Train 392',zh:'392 候車'},
+          {t:'準備 eTicket QR Code（三人）。開車前約 10–15 分鐘依廣播上高架月台。',line:'Amtrak',en:'Boarding · Track Level',zh:'上月台'},
+          {t:'Coach 自由入座，大行李放車廂端行李架。列車長上車後查票。',en:'Coach Seating',zh:'自由入座'},
+          {t:'預計 21:45 抵達 Chicago Union Station（官方時刻表；11/15 當天再在 App 確認）。下車後跟「Exit / Canal St」指標到 Great Hall。',line:'Amtrak',en:'Chicago Union Station',zh:'芝加哥聯合車站'}
+        ]},
+        bus:{lines:['Bus'],min:200,fare:47,steps:[
+          {t:'Peoria Charter 從 Illinois Terminal（或 ISR、Armory）直達 O’Hare，下車點在第 2 航廈出發樓層；2026 年官網線上單程約 US$47。週日晚上班次請在 peoriacharter.com 查詢並先買票。',line:'Bus',en:'Peoria Charter · O’Hare',zh:'直達機場巴士'},
+          {t:'抵達 O’Hare 後，旅館接駁車多在第 2 航廈入境層（Arrivals）路邊；依旅館指示。',line:'Shuttle',en:'Hotel Shuttle · T2 Arrivals',zh:'旅館接駁'}
+        ]}
+      },
+      fb:['392 誤點：用 Amtrak App 看即時位置；抵達若超過 22:30，下一段直接叫 UberXL。','停駛或取消：問 Illinois Terminal 的 Amtrak 人員是否有替代巴士；或改 Peoria Charter 直達 O’Hare。']
+    });
+    L.push({
+      id:'d6-cus-orh', from:'CUS', to:'ORH', title:'Union Station → 機場附近旅館（深夜）', start:'21:55', lug:true, pref:'xl',
+      warn:'11/13 22:00 至 11/16 04:00 Blue Line 在 Jefferson Park 與 Harlem（O’Hare 支線）之間停駛，改搭接駁巴士。深夜帶行李轉乘很辛苦，建議 UberXL。',
+      m:{
+        uberxl:{lines:['Uber'],min:35,ux:[45,65],xl:true,steps:uberSteps('Union Station 的叫車點：跟站內「Rideshare」指標，或從 Canal St 出口到路邊（App 會建議上車點）','在旅館正門下車，到櫃台辦入住。')},
+        uberx:{lines:['Uber'],min:35,ux:[45,65]},
+        transit:{lines:['Walk','Blue','Shuttle','Blue'],min:85,km:1.0,cta:'rail',steps:[
+          {t:'從 Union Station 往南沿 S Clinton St 走到 Clinton（Blue Line）站，約 6 分鐘。',line:'Walk',en:'Clinton (Blue)',zh:'藍線 Clinton 站'},
+          {t:'三日券此時已過期：用信用卡或 Apple Pay 感應，每人 US$2.50。搭「Blue Line · O’Hare」。',line:'Blue',en:'Blue Line · O’Hare',zh:'藍線往機場'},
+          {t:'在「Jefferson Park」下車（施工期間列車在此折返），跟「Shuttle Bus」指標到公車轉運站 Stop A。',line:'Blue',en:'Jefferson Park · Shuttle',zh:'改搭接駁巴士'},
+          {t:'接駁巴士開到「Harlem（O’Hare 支線）」，下車後回到月台搭 Blue Line 往 O’Hare。',line:'Shuttle',en:'Harlem (O’Hare Branch)',zh:'回到藍線'},
+          {t:'依旅館位置在 Rosemont 或 O’Hare 下車，再搭旅館接駁或步行。旅館地址填好後，用下方地圖確認最後一段。',line:'Blue',en:'Rosemont / O’Hare',zh:'機場站'}
+        ]}
+      },
+      fb:['深夜安全：Union Station 叫車點在室內等，車到再出去；三人行李一起看管。','Uber 價格突然暴漲：等 10 分鐘再叫，或比較 Lyft、計程車（Union Station 有計程車排班處）。']
+    });
+  }
+  if (day===7){
+    L.push({
+      id:'d7-orh-t5', from:'ORH', to:'T5', title:'旅館 → O’Hare 第 5 航廈', start:'10:00', by:'11:00', home:true, lug:true, pref:'shuttle',
+      m:{
+        shuttle:{lines:['Shuttle'],min:20,fare:0,steps:[
+          {t:'先在櫃台問清楚接駁車時刻與上車處（“What time is the next airport shuttle to Terminal 5?”）。O’Hare 規定大部分旅館接駁停在第 2 航廈入境層路邊，少數會到第 5 航廈。',line:'Shuttle',en:'Airport Shuttle',zh:'旅館機場接駁'},
+          {t:'若接駁只到 Terminal 2：下車後跟「Airport Transit System」指標搭免費 ATS 到 Terminal 5（約 5–7 分鐘）。',line:'ATS',en:'ATS · Terminal 5',zh:'ATS 往第 5 航廈'},
+          {t:'在 Terminal 5 跟「Departures / Check-in」指標上出境樓層。',line:'Walk',en:'Terminal 5 Departures',zh:'第 5 航廈出境'}
+        ]},
+        uberx:{lines:['Uber'],min:20,ux:[15,25],steps:uberSteps('旅館正門','送機可直接停 Terminal 5 上層出境（Departures）路邊，選 “Terminal 5 – Departures”。')},
+        uberxl:{lines:['Uber'],min:20,ux:[15,25],xl:true},
+        transit:{lines:['Blue','ATS'],min:30,cta:'rail',steps:[
+          {t:'旅館在 Rosemont 一帶時：走到 Rosemont（Blue Line）站，搭往「O’Hare」1 站，感應付費每人 US$2.50。',line:'Blue',en:'Blue Line · O’Hare',zh:'藍線往機場'},
+          {t:'O’Hare 站下車，跟指標走到 Terminal 2，再搭 ATS 到 Terminal 5。',line:'ATS',en:'ATS · Terminal 5',zh:'ATS 往第 5 航廈'}
+        ]}
+      },
+      fb:['接駁車 15 分鐘沒來：立刻叫 UberXL。','塞車：送機路線走 I-190，進機場後指標寫 “Terminal 5 / International”。']
+    });
+    L.push({
+      id:'d7-t5-board', from:'T5', to:'T5', title:'第 5 航廈：報到 → 安檢 → 登機', start:'11:00', by:'13:30', tour:true,
+      m:{
+        walk:{lines:['Walk'],min:60,steps:[
+          {t:'進出境大廳看頭上的航班看板，找 “CX 807 Hong Kong” 與 Cathay Pacific 報到櫃台區號碼。',en:'Check-in · Cathay Pacific',zh:'國泰航空報到'},
+          {t:'出示護照與電子機票；托運行李的件數與重量依機票規定（行動電源、鋰電池放隨身）。拿到登機證後確認登機時間與 Gate。',en:'Bag Drop',zh:'托運行李'},
+          {t:'跟「Security Checkpoint」指標到 TSA 安檢：筆電、液體（每瓶 ≤ 3.4 oz／100 ml、裝一個透明袋）拿出來，外套、皮帶可能要脫。',en:'Security Checkpoint',zh:'TSA 安檢'},
+          {t:'安檢後先走到登機門確認位置，再去吃東西。起飛前約 40–50 分鐘開始登機，以登機證為準。',en:'Gate M?',zh:'登機門'},
+          {t:'14:10 起飛（台灣時間 11/17 04:10）。到香港轉機與抵台時間依機票。',en:'CX 807 · 14:10',zh:'起飛'}
+        ]}
+      },
+      fb:['錯過報到截止：立刻到國泰櫃台或打國泰客服改票。','行李超重：在櫃台旁重新分裝，或付超重費。']
+    });
+  }
+  return L;
+}
+
+/* 每日清單 */
+var CHECK = {
+  1:['護照（隨身，不放托運）','eSIM 已開通，或電信漫遊已開','可感應的信用卡＋少量美金現金（零錢供公車用）','Google Cloud × Striim 確認信','Databricks 確認信條碼','筆電與充電器','三人各買 Ventra 3-Day Ticket','HI Chicago 訂房確認信','寄物單拍照'],
+  2:['寄給 Northwestern 主辦的確認信與回覆','Northwestern 報名表截圖','IEEE vTools 確認信與 Zoom 連結','護照或學生證','行動電源','LinkedIn QR Code、1 頁英文履歷'],
+  3:['護照（Amazon 大樓要有照片的政府證件）','入場 QR Code 加入 Apple 錢包','AWS Quick 報名確認信（Luma）','Agentics 確認信（Luma）','筆電與充電器','黑客松設備盤點：Jetson Orin Nano、電源、線材','晚上打包行李，隔天 07:00 退房出發'],
+  4:['Amtrak 391 三人 eTicket（截圖）','HI Chicago 退房','Champaign 住宿地址與訂房信','黑客松報名確認信','證件','延長線、轉接頭','零錢（MTD 公車 US$1）'],
+  5:['黑客松設備與充電器','外套（夜間接近 0°C）','飲水與點心','回程 Uber 先確認 App 可用'],
+  6:['退房、行李全部帶走','Amtrak 392 三人 eTicket','簡報檔多處備份','當面請主辦提供參賽證明','O’Hare 旅館訂房信'],
+  7:['護照','電子機票／登機證','托運行李重量','行動電源放隨身','旅館退房','抵台時間告知家人']
+};
+
+var h = React.createElement, useState = React.useState, useEffect = React.useEffect, useMemo = React.useMemo;
+var html = htm.bind(h);
+var KEY = 'chiuiuc-nav-v2';
+var DEF = {
+  tab:'nav', day:1, d1:'B', d2:'nu', d3:'agentics', audOk:false,
+  clear:'14:00', prep:10, bigLug:true, party:3, rate:32.45, tip:15, cta:'3day',
+  amt391:false, amt392:false, amtFare:25, chl:'', orh:'', orhName:'', twArr:'',
+  mode:{}, prog:{}, dep:{}, q:{}, chk:{}, active:{}, skp:{}
+};
+function load(){ try{ var s = JSON.parse(localStorage.getItem(KEY)||'null'); return s ? Object.assign({}, DEF, s) : Object.assign({}, DEF); }catch(e){ return Object.assign({}, DEF); } }
+function save(S){ try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} }
+
+/* ===== 時間工具 ===== */
+function toM(s){ if(!s) return null; var p=String(s).split(':'); return (+p[0])*60+(+p[1]); }
+function fm(m){ if(m==null||isNaN(m)) return '--:--'; var d=Math.floor(m/1440); m=((Math.round(m)%1440)+1440)%1440; var t=String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0'); return d>0? t+'（+1）' : t; }
+function nowChi(){
+  try{
+    var parts = new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+    var o={}; parts.forEach(function(p){o[p.type]=p.value;});
+    return {date:o.year+'-'+o.month+'-'+o.day, min:(+o.hour)*60+(+o.minute)};
+  }catch(e){ var d=new Date(); return {date:'',min:d.getHours()*60+d.getMinutes()}; }
+}
+function twOf(dayIdx, m){ var t=m+14*60, dd=10+(dayIdx-1)+Math.floor(t/1440); return '11/'+dd+' '+fm(t%1440); }
+
+/* ===== 地址與連結 ===== */
+function addr(k,S){ var p=P[k]; if(!p) return ''; if(p.dyn==='chl') return S.chl||''; if(p.dyn==='orh') return S.orh||''; return p.a; }
+function pname(k,S){ var p=P[k]; if(k==='ORH'&&S.orhName) return S.orhName; return p?p.n:k; }
+function gmaps(o,d,mode){ return 'https://www.google.com/maps/dir/?api=1&origin='+encodeURIComponent(o)+'&destination='+encodeURIComponent(d)+'&travelmode='+mode; }
+function uberUrl(d){ return 'https://m.uber.com/ul/?action=setPickup&pickup=my_location&dropoff%5Bformatted_address%5D='+encodeURIComponent(d); }
+function copyText(t, cb){
+  function fallback(){ try{ var a=document.createElement('textarea'); a.value=t; a.setAttribute('readonly',''); a.style.position='fixed'; a.style.opacity='0'; document.body.appendChild(a); a.select(); document.execCommand('copy'); document.body.removeChild(a); cb&&cb(true);}catch(e){cb&&cb(false);} }
+  if(navigator.clipboard&&navigator.clipboard.writeText){ navigator.clipboard.writeText(t).then(function(){cb&&cb(true);},fallback); } else fallback();
+}
+
+/* ===== 方式與費用 ===== */
+var MODE_LABEL = {transit:'大眾運輸',walk:'步行',uberx:'UberX',uberxl:'UberXL',amtrak:'Amtrak',bus:'巴士',shuttle:'旅館接駁'};
+function modesOf(leg){ var order=['transit','amtrak','walk','shuttle','uberx','uberxl','bus']; return order.filter(function(k){return leg.m[k];}); }
+function modeOf(leg,S){ var ms=modesOf(leg); var m=S.mode[leg.id]; if(m&&leg.m[m]) return m;
+  if(leg.pref==='xl') return (S.bigLug&&leg.m.uberxl)?'uberxl':'uberx';
+  if(leg.pref&&leg.m[leg.pref]) return leg.pref; return ms[0]; }
+function modeData(leg,k){
+  var d = leg.m[k]; if(!d) return null;
+  if((k==='uberxl'||k==='uberx') && !d.steps){ var o = leg.m[k==='uberxl'?'uberx':'uberxl']; d = Object.assign({}, o, d, {steps:o.steps, xl:k==='uberxl'}); }
+  return d;
+}
+function uberEst(leg,k){ var d=modeData(leg,k); if(!d||!d.ux) return 0; var mid=(d.ux[0]+d.ux[1])/2; return Math.round(mid*(k==='uberxl'?1.5:1)); }
+function legCost(leg,k,S){
+  var d=modeData(leg,k), n=Math.max(1,+S.party||3), r={per:0,total:0,kind:k,note:''};
+  if(!d) return r;
+  if(k==='uberx'||k==='uberxl'){
+    var q=S.q[leg.id+':'+k]; var base=(q!==undefined&&q!=='')?+q:uberEst(leg,k);
+    r.total=base*(1+(+S.tip||0)/100); r.per=r.total/n; r.quoted=(q!==undefined&&q!==''); r.base=base; return r;
+  }
+  if(k==='amtrak'){ r.per=+S.amtFare||0; r.total=r.per*n; r.note=(leg.id==='d4-amtrak391'?(S.amt391?'已購票':'未確認購票'):(S.amt392?'已購票':'未確認購票')); return r; }
+  if(k==='bus'||k==='shuttle'){ r.per=d.fare||0; r.total=r.per*n; return r; }
+  if(k==='transit'){
+    var per=0;
+    if(d.cta){
+      var covered = S.cta==='1day' || (S.cta==='3day' && leg.id.slice(0,2)!=='d6' && leg.id.slice(0,2)!=='d7');
+      if(!covered) per += d.cta==='ohare'?5:(d.cta==='bus'?2.25:2.5);
+      if(covered) r.note = S.cta==='3day'?'含在三日券':'含在一日券';
+    }
+    if(d.mtd) per += d.mtd*1;
+    r.per=per; r.total=per*n; return r;
+  }
+  return r;
+}
+function dayCost(day,S){
+  var legs=legsFor(day,S), sum=0, rows=[], n=Math.max(1,+S.party||3), anyCta=false;
+  legs.forEach(function(l){ var k=modeOf(l,S), c=legCost(l,k,S); sum+=c.total; rows.push({leg:l,k:k,c:c}); var d=modeData(l,k); if(k==='transit'&&d&&d.cta) anyCta=true; });
+  var pass=0, passNote='';
+  if(S.cta==='3day' && day===1){ pass=15*n; passNote='Ventra 3-Day Ticket ×'+n; }
+  if(S.cta==='1day' && anyCta){ pass=5*n; passNote='CTA 1-Day Pass ×'+n; }
+  return {sum:sum+pass, rows:rows, pass:pass, passNote:passNote};
+}
+var usd = function(v){ return 'US$'+(Math.round(v*100)/100).toFixed(v%1===0?0:2); };
+var twd = function(v,S){ return 'NT$'+Math.round(v*(+S.rate||0)).toLocaleString('en-US'); };
+
+/* ===== 時程計算 ===== */
+function plan(day,S){
+  var legs=legsFor(day,S), out={}, prev=null;
+  legs.forEach(function(l){
+    var k=modeOf(l,S), d=modeData(l,k), dep;
+    if(S.dep[l.id]) dep=toM(S.dep[l.id]);
+    else if(l.start==='CLEAR') dep=toM(S.clear);
+    else if(l.after!=null && prev) dep=out[prev.id].eta+l.after;
+    else dep=toM(l.start);
+    var extra=0;
+    if(l.home) extra+=(+S.prep||0);
+    if(l.lug&&S.bigLug&&(k==='transit'||k==='walk')) extra+=10;
+    if(l.lug&&S.bigLug&&(k==='uberx'||k==='uberxl')) extra+=5;
+    var eta;
+    if(l.train&&k==='amtrak'){ dep=toM(l.fixed); eta=toM(l.arr); if(eta<dep) eta+=1440; }
+    else eta=dep+extra+(d?d.min:0);
+    out[l.id]={dep:dep,eta:eta,extra:extra,k:k,min:d?d.min:0};
+    prev=l;
+  });
+  return {legs:legs,t:out};
+}
+function status(l,t){
+  if(l.tour || (!l.by && !l.hard)) return null;
+  var by=toM(l.by||l.hard), diff=by-t.eta;
+  if(l.hard && t.eta>toM(l.hard)) return {lv:'bad',txt:'會趕不上（最晚 '+l.hard+'）'};
+  if(diff<0) return {lv:'bad',txt:'比你設定的目標抵達時間 '+l.by+' 晚 '+(-diff)+' 分鐘'};
+  if(diff<10) return {lv:'warn',txt:'比你設定的目標抵達時間 '+l.by+' 只早 '+diff+' 分鐘，緩衝很少'};
+  return {lv:'ok',txt:'比你設定的目標抵達時間 '+l.by+' 早 '+diff+' 分鐘'};
+}
+
+/* ===== 小元件 ===== */
+function Bullet(p){ var L=LINES[p.l]||LINES.Walk; return html`<span className="bul" style=${{background:L.c}}>${L.n}</span>`; }
+function Strip(p){ return html`<span className="strip">${p.lines.map(function(x,i){return html`<${Bullet} key=${i} l=${x}/>`;})}</span>`; }
+var ST = {ok:['已確認','st-ok'],pend:['待確認','st-pend'],wait:['候補中','st-wait'],alt:['備案','st-alt'],todo:['未確認','st-todo'],info:['備選資料','st-info'],self:['自行安排','st-self']};
+function Badge(p){ var s=ST[p.st]||ST.self; return html`<span className=${'badge '+s[1]}>${s[0]}</span>`; }
+
+function Plate(p){
+  var s=p.step||{}; var L=s.line?LINES[s.line]:null;
+  return html`<div className="plate" role="group" aria-label="目前步驟">
+    <div className="plate-top">
+      ${L?html`<span className="plate-line" style=${{background:L.c}}>${L.n}</span>`:null}
+      <span className="plate-count">${p.label}</span>
+    </div>
+    ${s.en?html`<div className="plate-en">${s.en}</div>`:null}
+    ${s.zh?html`<div className="plate-zh">${s.zh}</div>`:null}
+    <p className="plate-t">${s.t||'這一段已完成。'}</p>
+  </div>`;
+}
+
+function MapRow(p){
+  var S=p.S, l=p.leg, o=addr(l.from,S), d=addr(l.to,S), cp=useState(''), msg=cp[0], setMsg=cp[1];
+  if(!d) return html`<div className="note warn">目的地地址尚未填寫，先到「設定」輸入，導航按鈕才會出現。</div>`;
+  var org = o||d;
+  if(l.from===l.to) return html`<div className="maprow">
+    <a className="btn" href=${'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(d)} target="_blank" rel="noopener">在 Google 地圖開啟</a>
+    <button className="btn" onClick=${function(){copyText(d,function(ok){setMsg(ok?'已複製':'無法複製，請長按地址');setTimeout(function(){setMsg('');},1800);});}}>複製英文地址</button>
+    <div className="addr"><span>${d}</span>${msg?html`<em>${msg}</em>`:null}</div></div>`;
+  return html`<div className="maprow">
+    <a className="btn" href=${gmaps(org,d,'transit')} target="_blank" rel="noopener">大眾運輸導航</a>
+    <a className="btn" href=${gmaps(org,d,'walking')} target="_blank" rel="noopener">步行導航</a>
+    <a className="btn" href=${gmaps(org,d,'driving')} target="_blank" rel="noopener">開車導航</a>
+    <a className="btn" href=${uberUrl(d)} target="_blank" rel="noopener">開啟 Uber</a>
+    <button className="btn" onClick=${function(){copyText(d,function(ok){setMsg(ok?'已複製':'無法複製，請長按地址');setTimeout(function(){setMsg('');},1800);});}}>複製英文地址</button>
+    <div className="addr"><span>${d}</span>${msg?html`<em>${msg}</em>`:null}</div>
+  </div>`;
+}
+
+/* ===== 路段詳情 ===== */
+function LegDetail(p){
+  var S=p.S, set=p.set, l=p.leg, t=p.t, k=t.k, d=modeData(l,k), steps=(d&&d.steps)||[], key=l.id+':'+k;
+  var done=Math.min(S.prog[key]||0, steps.length), st=status(l,t), c=legCost(l,k,S), n=Math.max(1,+S.party||3);
+  var nowM=nowChi().min;
+  function setMode(m){ var o=Object.assign({},S.mode); o[l.id]=m; set({mode:o}); }
+  function setDep(v){ var o=Object.assign({},S.dep); if(v) o[l.id]=v; else delete o[l.id]; set({dep:o}); }
+  function setQ(v){ var o=Object.assign({},S.q); if(v==='') delete o[key]; else o[key]=v; set({q:o}); }
+  function goto(i){ var o=Object.assign({},S.prog); o[key]=Math.max(0,Math.min(steps.length,i)); set({prog:o}); }
+  var ev=l.ev?{late:t.eta-toM(l.ev.s), left:toM(l.ev.e)-t.eta}:null;
+  return html`<section className="leg" aria-label=${l.title}>
+    <div className="leg-head">
+      <div className="ft"><span>${pname(l.from,S)}</span><span className="arr" aria-hidden="true">▸</span><span>${pname(l.to,S)}</span></div>
+      ${l.warn?html`<div className="note bad">${l.warn}</div>`:null}
+    </div>
+    <div className="seg" role="tablist" aria-label="交通方式">
+      ${modesOf(l).map(function(m){ return html`<button key=${m} role="tab" aria-selected=${m===k} className=${'seg-b'+(m===k?' on':'')} onClick=${function(){setMode(m);}}>${MODE_LABEL[m]}</button>`; })}
+    </div>
+
+    <div className="eta">
+      <label className="f"><span>計畫出門</span><input type="time" value=${fm(t.dep).slice(0,5)} onChange=${function(e){setDep(e.target.value);}}/></label>
+      <button className="mini" onClick=${function(){setDep(fm(nowM).slice(0,5));}}>現在出發</button>
+      ${S.dep[l.id]?html`<button className="mini ghost" onClick=${function(){setDep('');}}>還原預設</button>`:null}
+      <div className="eta-out">
+        <div><small>預估抵達</small><b>${fm(t.eta)}</b></div>
+        <div><small>車程</small><b>${t.min} 分</b>${t.extra?html`<small> ＋${t.extra} 分（準備／行李）</small>`:null}</div>
+        ${d&&d.km?html`<div><small>步行</small><b>${d.km} 公里</b></div>`:null}
+      </div>
+      ${st?html`<div className=${'note '+st.lv}>${st.txt}</div>`:null}
+      ${ev?html`<div className=${'note '+(ev.late>0?'warn':'ok')}>${l.ev.n}官方 ${l.ev.s} 開始：${ev.late>0?('你抵達時活動已進行 '+ev.late+' 分鐘'):'你能趕上開場'}，到你預計離開的 ${l.ev.e} 還能參加 ${Math.max(0,ev.left)} 分鐘。${l.ev.ag?' '+l.ev.ag:''}</div>`:null}
+      ${l.train?html`<div className="note">時刻為 Amtrak 公布的表定時間，非即時資料。出發前用 Amtrak App「Track Your Train」看即時狀態。</div>`:html`<p className="fine">以上為估計時間，不是即時交通資料。即時班次請看 CTA Train Tracker、Transit App 或 Uber 報價。</p>`}
+    </div>
+
+    <div className="prog">
+      <div className="bar"><i style=${{width:(steps.length?done/steps.length*100:0)+'%'}}></i></div>
+      <span>${done}/${steps.length} 步</span>
+    </div>
+    <ol className="steps">
+      ${steps.map(function(s,i){ var sk=(S.skp[key]||[]).indexOf(i)>=0&&i<done; var cls=i<done?(sk?'done skip':'done'):(i===done?'cur':''); return html`<li key=${i} className=${cls}>
+        <button className="chk" aria-label=${i<done?'標為未完成':'標為完成'} onClick=${function(){goto(i<done?i:i+1);}}>${i<done?(sk?'–':'✓'):i+1}</button>
+        <div>
+          ${s.en?html`<div className="sl">${s.line?html`<${Bullet} l=${s.line}/>`:null}<b>${s.en}</b>${s.zh?html`<span>${s.zh}</span>`:null}</div>`:null}
+          <p>${s.t}</p>
+        </div>
+      </li>`; })}
+    </ol>
+    <div className="row-btn">
+      <button className="mini ghost" onClick=${function(){goto(0);}}>重設本段進度</button>
+    </div>
+
+    <${MapRow} S=${S} leg=${l}/>
+
+    <div className="cost">
+      <div className="cost-g">
+        <div><small>單人</small><b>${usd(c.per)}</b></div>
+        <div><small>${n} 人合計</small><b>${usd(c.total)}</b></div>
+        <div><small>約台幣</small><b>${twd(c.total,S)}</b></div>
+      </div>
+      ${c.note?html`<p className="fine">${c.note}</p>`:null}
+      ${(k==='uberx'||k==='uberxl')?html`<div className="quote">
+        <label className="f"><span>實際報價（未含小費，US$）</span><input type="number" inputMode="decimal" placeholder=${'估 '+uberEst(l,k)} value=${S.q[key]!==undefined?S.q[key]:''} onChange=${function(e){setQ(e.target.value);}}/></label>
+        <p className="fine">${c.quoted?'使用你輸入的報價':'目前是估計值（'+(d.ux?('UberX 約 US$'+d.ux[0]+'–'+d.ux[1]):'')+(k==='uberxl'?'，XL 以 1.5 倍估':'')+'），請以 App 報價為準'}；小費 ${S.tip}%，每人分攤 ${usd(c.per)}。</p>
+      </div>`:null}
+      ${k==='amtrak'?html`<p className="fine">票價每人 US$${S.amtFare}（可在「設定」改成實際票價）。${c.note}。</p>`:null}
+    </div>
+
+    ${l.alt?html`<details className="more"><summary>其他走法</summary><p>${l.alt}</p></details>`:null}
+    ${l.fb&&l.fb.length?html`<details className="more" open=${st&&st.lv==='bad'}><summary>錯過班次、迷路或時間不夠</summary><ul>${l.fb.map(function(x,i){return html`<li key=${i}>${x}</li>`;})}</ul></details>`:null}
+  </section>`;
+}
+
+/* ===== 每日頁 ===== */
+function Switches(p){
+  var S=p.S,set=p.set,day=p.day;
+  if(day===1) return html`<div className="sw"><span>第一天路線</span>
+    <div className="seg">
+      <button className=${'seg-b'+(S.d1==='A'?' on':'')} onClick=${function(){set({d1:'A'});}}>A 直接去活動</button>
+      <button className=${'seg-b'+(S.d1==='B'?' on':'')} onClick=${function(){set({d1:'B'});}}>B 先放行李</button>
+    </div></div>`;
+  if(day===2) return html`<div className="sw"><span>白天活動</span>
+    <div className="seg">
+      <button className=${'seg-b'+(S.d2==='nu'?' on':'')} onClick=${function(){set({d2:'nu'});}}>主要：Northwestern 年會</button>
+      <button className=${'seg-b'+(S.d2==='qccs'?' on':'')} onClick=${function(){set({d2:'qccs'});}}>備案：QCCS</button>
+    </div></div>`;
+  if(day===3) return html`<div className="sw"><span>晚上活動</span>
+    <div className="seg">
+      <button className=${'seg-b'+(S.d3!=='aud'?' on':'')} onClick=${function(){set({d3:'agentics'});}}>Agentics（已確認）</button>
+      <button className=${'seg-b'+(S.d3==='aud'?' on':'')} disabled=${!S.audOk} onClick=${function(){set({d3:'aud'});}}>AI Under Debate${S.audOk?'':'（候補，鎖定）'}</button>
+    </div></div>`;
+  return null;
+}
+
+function Day1Advice(p){
+  var S=p.S,set=p.set;
+  if(S.d1!=='B') return html`<div className="note warn">A 方案：大型行李整天跟著走。進 Google 與 Databricks 會場前先問能否寄放（“Is there a place we can leave our luggage?”），不行就輪流看管。</div>`;
+  var pl=plan(1,S), t=pl.t['d1-hi-gcp']; if(!t) return null;
+  if(t.eta>toM('16:15')) return html`<div className="note bad">依出關時間 ${S.clear}，B 方案預估 ${fm(t.eta)} 才到 Google 活動，會錯過 16:30 Workshop 開頭。建議改 A 直接前往，並先確認大型行李能否帶入會場。
+    <button className="mini" onClick=${function(){set({d1:'A'});}}>切換到 A</button></div>`;
+  return html`<div className="note ok">依出關時間 ${S.clear}，B 方案預估 ${fm(t.eta)} 抵達 Google 活動。</div>`;
+}
+
+function DayView(p){
+  var S=p.S,set=p.set,day=p.day, info=DAYS[day-1], pl=plan(day,S), legs=pl.legs, evs=eventsFor(day,S);
+  var nc=nowChi(), isToday=nc.date===info.date;
+  var doneLeg=function(l){ var k=pl.t[l.id].k, d=modeData(l,k), n=(d&&d.steps||[]).length; return (S.prog[l.id+':'+k]||0)>=n && n>0; };
+  var activeId=S.active[day]; var active=legs.filter(function(l){return l.id===activeId;})[0] || legs.filter(function(l){return !doneLeg(l);})[0] || legs[0];
+  var curEv = isToday ? evs.filter(function(e){ return !e.alt && e.e && toM(e.t)<=nc.min && nc.min<toM(e.e); })[0] : null;
+  var dayDone=legs.filter(doneLeg).length;
+  function pick(id){ var o=Object.assign({},S.active); o[day]=id; set({active:o}); window.scrollTo({top:0,behavior:'smooth'}); }
+  var at=active?pl.t[active.id]:null, ad=active?modeData(active,at.k):null, asteps=(ad&&ad.steps)||[], adone=active?Math.min(S.prog[active.id+':'+at.k]||0,asteps.length):0;
+
+  var items=[];
+  evs.forEach(function(e){ items.push({kind:'e',m:toM(e.t),e:e}); });
+  legs.forEach(function(l,i){ items.push({kind:'l',m:pl.t[l.id].dep-0.5,l:l,i:i}); });
+  items.sort(function(a,b){return a.m-b.m;});
+
+  return html`<div>
+    <div className="dayhead">
+      <h1>Day ${day}｜${info.md}（${info.dow}）</h1>
+      <p>${info.title}</p>
+      <div className="dprog"><div className="bar"><i style=${{width:(legs.length?dayDone/legs.length*100:0)+'%'}}></i></div><span>完成 ${legs.length?Math.round(dayDone/legs.length*100):0}%</span></div>
+    </div>
+    <${Switches} S=${S} set=${set} day=${day}/>
+    ${day===1?html`<${Day1Advice} S=${S} set=${set}/>`:null}
+    ${day===4&&!S.amt391?html`<div className="note bad">還沒確認 Amtrak 391 車票。請先在 Amtrak App 購買 11/13 Train 391（Chicago → Champaign-Urbana）三人票，完成後到「設定」打勾。</div>`:null}
+    ${day===6&&!S.amt392?html`<div className="note bad">還沒確認 Amtrak 392 車票（11/15 Champaign 19:08 → Chicago 21:45）。</div>`:null}
+    ${(day===4||day===5||day===6)&&!S.chl?html`<div className="note warn">Champaign 住宿地址待填寫，相關導航暫時無法開啟。<button className="mini" onClick=${function(){set({tab:'set'});}}>去填寫</button></div>`:null}
+    ${(day===6||day===7)&&!S.orh?html`<div className="note warn">O’Hare 機場附近旅館地址待填寫。<button className="mini" onClick=${function(){set({tab:'set'});}}>去填寫</button></div>`:null}
+
+    ${curEv?html`<div className="now"><small>現在</small><b>${curEv.title}</b><span>到 ${curEv.e}</span></div>`:null}
+
+    ${active?html`<div className="hero">
+      <div className="hero-title"><small>${doneLeg(active)?'這段已完成':'下一段'}</small><b>${active.title}</b><span>${fm(at.dep)} 出發 · 預估 ${fm(at.eta)} 到</span></div>
+      <${Plate} step=${asteps[adone]} label=${asteps.length?(adone<asteps.length?('第 '+(adone+1)+' 步，共 '+asteps.length+' 步'):'全部完成'):''}/>
+    </div>`:null}
+
+    <div className="legpick" role="tablist" aria-label="今日路段">
+      ${legs.map(function(l,i){ var t=pl.t[l.id], s=status(l,t), on=active&&l.id===active.id; return html`<button key=${l.id} role="tab" aria-selected=${on} className=${'lp'+(on?' on':'')+(doneLeg(l)?' fin':'')} onClick=${function(){pick(l.id);}}>
+        <span className="lp-n">${doneLeg(l)?'✓':i+1}</span>
+        <span className="lp-t">${l.title}</span>
+        <span className="lp-m"><${Strip} lines=${(modeData(l,t.k)||{}).lines||[]}/> ${fm(t.dep)}–${fm(t.eta)} ${s&&s.lv!=='ok'?html`<em className=${s.lv}>!</em>`:null}</span>
+      </button>`; })}
+    </div>
+
+    ${active?html`<${LegDetail} S=${S} set=${set} leg=${active} t=${at}/>`:null}
+
+    <h2 className="sec">今日時間軸</h2>
+    <ol className="tl">
+      ${items.map(function(it,i){
+        if(it.kind==='e'){ var e=it.e; return html`<li key=${'e'+i} className=${'tl-e'+(e.alt?' dim':'')}>
+          <time>${e.t}${e.e?html`<small>–${e.e}</small>`:null}</time>
+          <div><div className="tl-h"><b>${e.title}</b><${Badge} st=${e.st}/></div>
+          ${e.p?html`<p className="fine">${pname(e.p,S)}${addr(e.p,S)?'｜'+addr(e.p,S):'｜地址待填寫'}</p>`:null}
+          <p>${e.note}</p></div></li>`; }
+        var l=it.l, t=pl.t[l.id], c=legCost(l,t.k,S);
+        return html`<li key=${'l'+i} className="tl-l"><time>${fm(t.dep)}</time>
+          <button onClick=${function(){pick(l.id);}}><${Strip} lines=${(modeData(l,t.k)||{}).lines||[]}/><span>${MODE_LABEL[t.k]} ${t.min} 分 · ${fm(t.eta)} 到 · 每人 ${usd(c.per)}</span></button></li>`;
+      })}
+    </ol>
+  </div>`;
+}
+
+/* ===== 票卡頁 ===== */
+function Tickets(){
+  var T=[
+    {h:'CTA Ventra：三日券（本次首選）',lines:['Blue','Red','Green','Brown'],b:[
+      ['在哪買','方法一：Ventra App。建帳號 → Set Up Your First Ventra Card → Add Ventra Card to Apple Wallet（建立虛擬卡最少要儲值 US$5），再加購 3-Day CTA/Pace Pass US$15。一張虛擬卡只能放在一支手機，三人要各自辦。方法二：O’Hare Blue Line 車站閘門前的 Ventra 售票機（O’Hare 與 Midway 的機器才賣 3-Day Ticket），每人 US$15，可付現或刷卡。'],
+      ['App 注意','先在機場 Wi-Fi 下辦好。外國信用卡偶有郵遞區號驗證失敗；在 Wallet 開啟 Express Transit，閘門前不用解鎖。失敗就改用售票機。'],
+      ['怎麼用','紙本票，插入或感應閘門。72 小時從第一次使用起算；11/10 約 14:00 啟用，可用到 11/13 約 14:00，涵蓋市區所有 CTA 列車與公車（含 Pace 公車）。'],
+      ['不適用','Metra 通勤火車、Amtrak、MTD。'],
+      ['退換','售出後不退；遺失無法補發，拍照存證並分開保管。']]},
+    {h:'CTA 單程票與一日券',lines:['Blue'],b:[
+      ['單程票','售票機買 Single Ride Ticket：一般車站 US$3、O’Hare 站 US$5，2 小時內可搭 3 趟（含轉乘）。'],
+      ['一日券','1-Day Ticket／Pass US$5，24 小時無限搭；任何車站售票機可買。'],
+      ['Ventra 卡','實體卡 US$5，在 Ventra App 註冊後退回為乘車儲值；一張卡可用儲值替最多 7 人付車資。'],
+      ['票價依據','CTA 2026 年預算確定不調漲票價（2025-11 董事會通過）。以售票機畫面為準。']]},
+    {h:'Apple Pay／信用卡感應（Pay-as-you-go）',lines:['Blue','Red'],b:[
+      ['怎麼用','在閘門或公車上的 Ventra 讀卡機，直接用有感應標誌的信用卡、Apple Pay 碰一下。'],
+      ['價格','列車 US$2.50、公車 US$2.25；從 O’Hare 上車 US$5。2 小時內轉乘依 Ventra 規則計算。'],
+      ['注意','一張卡或一支手機一次只付一個人，三人要各自感應；國外卡可能有海外手續費。']]},
+    {h:'Metra（只在 Day 2 備案使用）',lines:['Metra'],b:[
+      ['在哪買','Ventra App 的 Metra 購票功能，上車前買好並啟用。'],
+      ['範圍','Ogilvie → Davis St（UP-N 線）。CTA 三日券不適用。'],
+      ['班次','離峰約每小時一班，先查時刻表。']]},
+    {h:'Amtrak 電子車票（391、392）',lines:['Amtrak'],b:[
+      ['在哪買','Amtrak App 或 amtrak.com。11/13 Train 391 Chicago → Champaign-Urbana（08:15 → 10:47）；11/15 Train 392 Champaign-Urbana → Chicago（19:08 → 21:45）。'],
+      ['要不要訂位','要先買票（車票即訂位），Coach 不劃座，上車自由入座。'],
+      ['出示','App 或 Email 的 eTicket QR Code，一張可含多位旅客；截圖備用。'],
+      ['行李','每人 2 件手提行李（每件 ≤ 50 lb、28×22×14 in）＋1 件個人物品（≤ 25 lb、14×11×7 in）；超過的每件加收 US$20。'],
+      ['退改','依票種而不同：Flexible 出發前取消可全額退；Saver、Value 有退票限制或手續費。不能搭時一定要在開車前取消，沒取消就沒搭（no-show）通常整張作廢。以購票頁面條款為準。'],
+      ['價格','線上看到約 US$21 起，依日期浮動；請到「設定」填實際票價。']]},
+    {h:'Champaign-Urbana MTD 公車',lines:['MTD'],b:[
+      ['價格','單程 US$1，可投零錢、1 元紙鈔，或用 Token Transit App（也內建於 Transit App）。換車向司機要免費 transfer slip。'],
+      ['週末','週六、週日可向司機買 All-Day Pass，每人 US$2。'],
+      ['訪客','只有出示 UIUC i-Card 的學生與教職員免費，訪客要付費。'],
+      ['找零','司機 19:00 前最多找零 US$5，盡量備零錢。'],
+      ['路線','平日白天 24 Link 連接工程校區與 Research Park；Yellow 線經 First St。晚間與週末路線編號會變（如 100 Yellow），用 Transit App 查即時班次。']]},
+    {h:'Peoria Charter 巴士（備案）',lines:['Bus'],b:[
+      ['路線','Champaign（Illinois Terminal、ISR、Armory）↔ 芝加哥市區、O’Hare。到 O’Hare 的下車點在第 2 航廈出發樓層；從 O’Hare 出發在 Multi-Modal Facility（MMF）。'],
+      ['價格','2026 年官網線上單程約 US$46–48；現金價不同且需剛好金額。'],
+      ['班表','官網 peoriacharter.com 查詢並先買票。']]},
+    {h:'Uber 叫車',lines:['Uber'],b:[
+      ['O’Hare','第 5 航廈不能叫車：搭免費 ATS 到 Terminal 2，上層出境（Upper Level Departures）的 Rideshare 區上車。送機可直接停 Terminal 5。'],
+      ['車型','UberX 最多 4 人、行李少；三人＋大行李選 UberXL。'],
+      ['安全','核對車牌、車型、司機名字；分享行程；坐後座。'],
+      ['付款與小費','App 綁信用卡自動扣款，下車後在 App 給小費（約 10–20%）。'],
+      ['計程車','O’Hare 各航廈下層有排班計程車，可直接刷卡。']]}
+  ];
+  return html`<div>
+    <h1 className="pg">交通票卡</h1>
+    <p className="lead">票價核對自 CTA、MTD、Amtrak、Peoria Charter 官方資料（查詢於 2026-11-10）。現場售票機與 App 顯示的價格為最終依據。</p>
+    ${T.map(function(c,i){ return html`<details key=${i} className="card" open=${i===0}>
+      <summary><${Strip} lines=${c.lines}/><b>${c.h}</b></summary>
+      <dl>${c.b.map(function(r,j){return html`<div key=${j}><dt>${r[0]}</dt><dd>${r[1]}</dd></div>`;})}</dl>
+    </details>`; })}
+  </div>`;
+}
+
+/* ===== 費用頁 ===== */
+function Costs(p){
+  var S=p.S,set=p.set, total=0, n=Math.max(1,+S.party||3);
+  var days=DAYS.map(function(d){ var c=dayCost(d.id,S); total+=c.sum; return {d:d,c:c}; });
+  return html`<div>
+    <h1 className="pg">交通費用</h1>
+    <div className="sum">
+      <div><small>七天合計（${n} 人）</small><b>${usd(total)}</b><span>${twd(total,S)}</span></div>
+      <div><small>每人</small><b>${usd(total/n)}</b><span>${twd(total/n,S)}</span></div>
+    </div>
+    <div className="setg">
+      <label className="f"><span>人數</span><input type="number" inputMode="numeric" min="1" value=${S.party} onChange=${function(e){set({party:e.target.value});}}/></label>
+      <label className="f"><span>Uber 小費 %</span><input type="number" inputMode="numeric" value=${S.tip} onChange=${function(e){set({tip:e.target.value});}}/></label>
+      <label className="f"><span>匯率 1 USD＝TWD</span><input type="number" inputMode="decimal" step="0.01" value=${S.rate} onChange=${function(e){set({rate:e.target.value});}}/></label>
+      <label className="f"><span>CTA 票種</span><select value=${S.cta} onChange=${function(e){set({cta:e.target.value});}}>
+        <option value="3day">三日券 US$15／人</option><option value="1day">每天一日券 US$5／人</option><option value="payg">每趟感應付費</option></select></label>
+    </div>
+    <p className="fine">匯率預設 32.45：取自 allratestoday.com 的中間價（2026-11-10 查詢），同期 currencybeacon 10/30 為 32.62。網頁不會自動更新匯率，刷卡實際匯率另含銀行手續費，請自行修改。</p>
+    ${days.map(function(x){ return html`<details key=${x.d.id} className="card">
+      <summary><b>Day ${x.d.id}｜${x.d.md}</b><span className="right">${usd(x.c.sum)}｜${twd(x.c.sum,S)}</span></summary>
+      <table className="tbl"><tbody>
+        ${x.c.pass?html`<tr><td>${x.c.passNote}</td><td>—</td><td>${usd(x.c.pass)}</td></tr>`:null}
+        ${x.c.rows.map(function(r){ return html`<tr key=${r.leg.id}><td>${r.leg.title}<small>${MODE_LABEL[r.k]}${r.c.note?'｜'+r.c.note:''}</small></td><td>${usd(r.c.per)}</td><td>${usd(r.c.total)}</td></tr>`; })}
+      </tbody></table>
+      <p className="fine">欄位：單人／${n} 人合計。Uber 已含小費，可在各路段輸入實際報價。</p>
+    </details>`; })}
+  </div>`;
+}
+
+/* ===== 清單頁 ===== */
+function Checks(p){
+  var S=p.S,set=p.set,day=S.day;
+  function tog(id){ var o=Object.assign({},S.chk); o[id]=!o[id]; set({chk:o}); }
+  var items=CHECK[day]||[], done=items.filter(function(_,i){return S.chk[day+'-'+i];}).length;
+  return html`<div>
+    <h1 className="pg">Day ${day} 準備清單</h1>
+    <p className="lead">已完成 ${done}/${items.length}。勾選狀態存在這台裝置的瀏覽器。</p>
+    <${DayTabs} S=${S} set=${set}/>
+    <ul className="cl">${items.map(function(t,i){ var id=day+'-'+i, on=!!S.chk[id]; return html`<li key=${id}><label><input type="checkbox" checked=${on} onChange=${function(){tog(id);}}/><span className=${on?'x':''}>${t}</span></label></li>`; })}</ul>
+  </div>`;
+}
+
+/* ===== 設定頁 ===== */
+function Settings(p){
+  var S=p.S,set=p.set;
+  function tx(k){ return function(e){ var o={}; o[k]=e.target.value; set(o); }; }
+  function ck(k){ return function(e){ var o={}; o[k]=e.target.checked; set(o); }; }
+  return html`<div>
+    <h1 className="pg">行程設定</h1>
+    <h2 className="sec">抵達與時間</h2>
+    <div className="setg">
+      <label className="f"><span>實際出關時間（芝加哥）</span><input type="time" value=${S.clear} onChange=${tx('clear')}/></label>
+      <label className="f"><span>出門準備時間（分鐘）</span><input type="number" inputMode="numeric" value=${S.prep} onChange=${tx('prep')}/></label>
+      <label className="tg"><input type="checkbox" checked=${S.bigLug} onChange=${ck('bigLug')}/><span>帶大型行李（步行與轉乘加 10 分鐘，Day 1、4、6、7 預設 UberXL 比較）</span></label>
+    </div>
+    <h2 className="sec">車票與報名</h2>
+    <div className="setg">
+      <label className="tg"><input type="checkbox" checked=${S.amt391} onChange=${ck('amt391')}/><span>已購買 11/13 Amtrak 391 三人票</span></label>
+      <label className="tg"><input type="checkbox" checked=${S.amt392} onChange=${ck('amt392')}/><span>已購買 11/15 Amtrak 392 三人票</span></label>
+      <label className="f"><span>Amtrak 每人票價（US$）</span><input type="number" inputMode="decimal" value=${S.amtFare} onChange=${tx('amtFare')}/></label>
+      <label className="tg"><input type="checkbox" checked=${S.audOk} onChange=${function(e){ set({audOk:e.target.checked, d3:e.target.checked?S.d3:'agentics'}); }}/><span>已收到 AI Under Debate 正式入場通知（打勾後 Day 3 才能切換）</span></label>
+    </div>
+    <h2 className="sec">住宿（未填寫的不會被當成確定資訊）</h2>
+    <div className="setg">
+      <label className="f wide"><span>Champaign 住宿英文地址（11/13–11/14）</span><input type="text" placeholder="待填寫，例如 123 Main St, Champaign, IL 61820" value=${S.chl} onChange=${tx('chl')}/></label>
+      <label className="f wide"><span>O’Hare 附近旅館名稱（11/15）</span><input type="text" placeholder="待填寫" value=${S.orhName} onChange=${tx('orhName')}/></label>
+      <label className="f wide"><span>O’Hare 附近旅館英文地址</span><input type="text" placeholder="待填寫" value=${S.orh} onChange=${tx('orh')}/></label>
+    </div>
+    <h2 className="sec">返台</h2>
+    <div className="setg">
+      <label className="f wide"><span>抵達台灣的日期與時間（依機票，例如 11/18 00:15 TPE）</span><input type="text" placeholder="待填寫" value=${S.twArr} onChange=${tx('twArr')}/></label>
+      <p className="fine">CX807 從 O’Hare 飛往香港。芝加哥 11/16 14:10 起飛＝台灣 11/17（二）04:10；近期同航班表定隔天 20:05 抵港（香港與台灣同時區），即約 11/17（二）20:05，再轉機到台北。請以機票為準。</p>
+      ${S.twArr?html`<div className="note ok">預計抵台：${S.twArr}</div>`:null}
+    </div>
+    <h2 className="sec">重設</h2>
+    <div className="row-btn">
+      <button className="mini ghost" onClick=${function(){ if(confirm('清除所有步驟進度？')) set({prog:{},active:{}}); }}>清除所有步驟進度</button>
+      <button className="mini ghost" onClick=${function(){ if(confirm('清除所有設定與勾選，回到預設？')) set(Object.assign({},DEF,{tab:'set'})); }}>全部回到預設</button>
+    </div>
+  </div>`;
+}
+
+/* ===== 我迷路了 ===== */
+function Lost(p){
+  var S=p.S, l=p.leg, close=p.close, dest=l?addr(l.to,S):'', org=l?addr(l.from,S):'', d=l?modeData(l,modeOf(l,S)):null;
+  var signs=[]; if(d&&d.steps) d.steps.forEach(function(s){ if(s.en&&signs.indexOf(s.en)<0) signs.push(s.en); });
+  var destEn=l?(P[l.to].en):'my destination';
+  var phrases=[
+    ['我迷路了，可以幫我去這個地址嗎？','Excuse me, I’m lost. Could you help me get to '+(dest||destEn)+'?'],
+    ['這班車有到這一站嗎？','Does this train stop at '+(signs[signs.length-2]||signs[0]||destEn)+'?'],
+    ['往這個方向要在哪個月台？','Which platform should I use for this direction?'],
+    ['我們錯過了火車，還有什麼選擇？','We missed our train. What are our options?'],
+    ['我的行李沒有出來。','My checked bag didn’t arrive. Where is the baggage service office?'],
+    ['手機沒有網路，可以借用 Wi-Fi 嗎？','My phone has no internet. Is there Wi-Fi I can use?'],
+    ['可以幫我叫計程車嗎？','Could you please call a taxi for us?']
+  ];
+  return html`<div className="modal" role="dialog" aria-modal="true" aria-label="我迷路了">
+    <div className="sheet">
+      <div className="sheet-h"><b>我迷路了</b><button className="mini" onClick=${close}>關閉</button></div>
+      ${l?html`<div className="lostft"><small>這一段</small><b>${pname(l.from,S)} → ${pname(l.to,S)}</b><p className="fine">${dest||'目的地地址待填寫'}</p></div>`:null}
+      ${l?html`<${MapRow} S=${S} leg=${l}/>`:null}
+      ${signs.length?html`<div><h3>要找的英文指標</h3><div className="signs">${signs.map(function(s,i){return html`<span key=${i}>${s}</span>`;})}</div></div>`:null}
+      <h3>給站務人員或路人看</h3>
+      <ul className="phr">${phrases.map(function(x,i){return html`<li key=${i}><small>${x[0]}</small><b>${x[1]}</b></li>`;})}</ul>
+      <h3>狀況處理</h3>
+      <details className="more"><summary>錯過 Amtrak</summary><p>到車站 Amtrak 櫃台或用 App 改下一班；11/13 下一班南下是 393（約 16:05），11/15 錯過 392 改搭 Peoria Charter 直達 O’Hare（先上官網確認班次）。先 Email 黑客松主辦或旅館說明。</p></details>
+      <details className="more"><summary>晚上回不了旅館</summary><p>先到有人、有燈光的室內（車站大廳、超商、旅館大廳）。叫 UberXL 或請店員叫計程車。芝加哥的 Red、Blue Line 24 小時營運，但深夜建議叫車。</p></details>
+      <details className="more"><summary>行李遺失</summary><p>機場：入境行李轉盤旁的航空公司行李服務櫃台（Baggage Service）登記，拿到 File Reference Number。CTA 車上遺失：撥 1-888-968-7282。Amtrak：撥 1-800-872-7245。</p></details>
+      <details className="more"><summary>手機沒網路</summary><p>這個網頁已載入的內容可繼續看；先截圖今天的步驟。機場、車站、星巴克、圖書館多有免費 Wi-Fi。把旅館英文地址寫在紙上給計程車司機看。</p></details>
+      <h3>重要電話</h3>
+      <ul className="tel">
+        <li><a href="tel:911">911</a><span>警察、消防、救護（緊急）</span></li>
+        <li><a href="tel:+18889687282">1-888-968-7282</a><span>CTA 客服</span></li>
+        <li><a href="tel:+18776698368">1-877-669-8368</a><span>Ventra 票卡客服</span></li>
+        <li><a href="tel:+18008727245">1-800-872-7245</a><span>Amtrak（USA-RAIL）</span></li>
+        <li><a href="tel:+12173848188">217-384-8188</a><span>Champaign-Urbana MTD</span></li>
+        <li><a href="tel:+18004480572">800-448-0572</a><span>Peoria Charter（Champaign）</span></li>
+        <li><a href="tel:+13126364758">1-312-636-4758</a><span>駐芝加哥臺北經濟文化辦事處 緊急聯絡（非急難勿撥）</span></li>
+        <li><a href="tel:+13126160100">1-312-616-0100</a><span>駐芝加哥臺北經濟文化辦事處 總機（55 W Wacker Dr Ste 1200）</span></li>
+        <li><a href="tel:01180008850885">011-800-0885-0885</a><span>外交部急難救助全球免付費專線（從美國撥）</span></li>
+        <li><a href="tel:+886800085095">+886-800-085-095</a><span>外交部緊急聯絡中心（付費，24 小時）</span></li>
+        <li><a href="tel:+13123600300">1-312-360-0300</a><span>HI Chicago Hostel</span></li>
+      </ul>
+      <p className="fine">電話來源：外交部領事事務局、CTA、Amtrak、MTD、Peoria Charter；旅館電話取自 Google 地圖。</p>
+    </div>
+  </div>`;
+}
+
+/* ===== 外框 ===== */
+function DayTabs(p){
+  var S=p.S,set=p.set;
+  return html`<nav className="days" aria-label="選擇日期">${DAYS.map(function(d){ var on=S.day===d.id; return html`<button key=${d.id} aria-current=${on?'date':undefined} className=${'dt'+(on?' on':'')} onClick=${function(){set({day:d.id});}}><b>Day ${d.id}</b><span>${d.md}</span></button>`; })}</nav>`;
+}
+
+function App(){
+  var st=useState(load), S=st[0], setS=st[1];
+  var lt=useState(false), lost=lt[0], setLost=lt[1];
+  var tk=useState(0), tick=tk[1];
+  useEffect(function(){ save(S); },[S]);
+  useEffect(function(){ var id=setInterval(function(){tick(function(x){return x+1;});},30000); return function(){clearInterval(id);}; },[]);
+  function set(o){ setS(function(prev){ return Object.assign({},prev,o); }); }
+  var nc=nowChi();
+  var pl=plan(S.day,S), legs=pl.legs, activeId=S.active[S.day];
+  var doneLeg=function(l){ var k=pl.t[l.id].k, d=modeData(l,k), n=(d&&d.steps||[]).length; return (S.prog[l.id+':'+k]||0)>=n&&n>0; };
+  var active=legs.filter(function(l){return l.id===activeId;})[0]||legs.filter(function(l){return !doneLeg(l);})[0]||legs[0];
+  var at=active?pl.t[active.id]:null, ad=active?modeData(active,at.k):null, steps=(ad&&ad.steps)||[], key=active?active.id+':'+at.k:'', done=Math.min(S.prog[key]||0,steps.length);
+  function step(dlt,skip){ var o=Object.assign({},S.prog); o[key]=Math.max(0,Math.min(steps.length,done+dlt)); var patch={prog:o};
+    var sk=Object.assign({},S.skp); var arr=(sk[key]||[]).filter(function(i){return i!==done && i!==done-1;}); if(skip) arr.push(done); sk[key]=arr; patch.skp=sk;
+    if(done+dlt>=steps.length){ var idx=legs.indexOf(active); if(idx>=0&&idx<legs.length-1){ var a=Object.assign({},S.active); a[S.day]=legs[idx+1].id; patch.active=a; } }
+    set(patch); }
+  var dayIdx=DAYS.findIndex(function(d){return d.date===nc.date;})+1;
+  var tabs=[['nav','導航'],['tix','票卡'],['cost','費用'],['chk','清單'],['set','設定']];
+  return html`<div className=${'app'+(S.tab==='nav'&&active?' has-act':'')}>
+    <header className="top">
+      <div className="clock">
+        <b>芝加哥 ${fm(nc.min)}</b>
+        <span>CST（UTC−6）｜台灣 ${dayIdx>0?twOf(dayIdx,nc.min):fm((nc.min+840)%1440)}</span>
+      </div>
+      <button className="lostbtn" onClick=${function(){setLost(true);}}>我迷路了</button>
+    </header>
+    ${S.tab==='nav'?html`<${DayTabs} S=${S} set=${set}/>`:null}
+    <main>
+      ${S.tab==='nav'?html`<${DayView} key=${S.day} S=${S} set=${set} day=${S.day}/>`:null}
+      ${S.tab==='tix'?html`<${Tickets}/>`:null}
+      ${S.tab==='cost'?html`<${Costs} S=${S} set=${set}/>`:null}
+      ${S.tab==='chk'?html`<${Checks} S=${S} set=${set}/>`:null}
+      ${S.tab==='set'?html`<${Settings} S=${S} set=${set}/>`:null}
+      <p className="foot">資料查證：CTA、O’Hare（flychicago.com）、Amtrak 時刻表、MTD、Peoria Charter、各活動頁與原行程表。查證日期 2026-11-10。Blue Line 11/13 22:00–11/16 04:00 Jefferson Park–Harlem 改接駁巴士（CTA 公告）。所有時間為芝加哥時間。</p>
+    </main>
+    ${S.tab==='nav'&&active?html`<div className="act" role="region" aria-label="步驟操作">
+      <div className="act-bar"><i style=${{width:(steps.length?done/steps.length*100:0)+'%'}}></i></div>
+      <div className="act-row">
+        <button className="ab ghost" disabled=${done<=0} onClick=${function(){step(-1);}}>上一步</button>
+        <button className="ab ghost" disabled=${done>=steps.length} onClick=${function(){step(1,true);}}>跳過</button>
+        <button className="ab main" disabled=${done>=steps.length} onClick=${function(){step(1);}}>${done>=steps.length?'本段完成':('完成第 '+(done+1)+' 步')}</button>
+      </div>
+    </div>`:null}
+    <nav className="tabs" aria-label="功能">${tabs.map(function(t){ return html`<button key=${t[0]} aria-current=${S.tab===t[0]?'page':undefined} className=${S.tab===t[0]?'on':''} onClick=${function(){set({tab:t[0]}); window.scrollTo(0,0);}}>${t[1]}</button>`; })}</nav>
+    ${lost?html`<${Lost} S=${S} leg=${active} close=${function(){setLost(false);}}/>`:null}
+  </div>`;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(html`<${App}/>`);
+
+</script>
+</body>
+</html>
